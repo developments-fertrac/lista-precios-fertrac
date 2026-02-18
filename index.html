@@ -8,6 +8,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Lista Fertrac">
 <title>Lista de Precios - Fertrac</title>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
   :root {
     --green: #F47920;
@@ -275,10 +276,72 @@
     display: none;
   }
   .offline-banner.visible { display: block; }
+
+  /* LOGIN SCREEN */
+  #login-screen {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    background: #f5f5f5;
+    padding: 20px;
+  }
+  .login-card {
+    background: white;
+    border-radius: 14px;
+    padding: 40px 32px;
+    max-width: 380px;
+    width: 100%;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.1);
+    text-align: center;
+  }
+  .login-logo { height: 60px; object-fit: contain; margin-bottom: 20px; }
+  .login-card h2 { font-size: 1.3rem; color: var(--gray-dark); margin-bottom: 8px; }
+  .login-card p { font-size: 0.85rem; color: var(--gray-mid); margin-bottom: 28px; }
+  .login-divider { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
+  #access-denied {
+    display: none;
+    background: #f8d7da;
+    color: #721c24;
+    border-radius: 8px;
+    padding: 12px;
+    font-size: 0.85rem;
+    margin-top: 16px;
+  }
+  #app-content { display: none; }
 </style>
 </head>
 <body>
 
+<!-- LOGIN SCREEN -->
+<div id="login-screen">
+  <div class="login-card">
+    <img src="https://raw.githubusercontent.com/developments-fertrac/lista-precios-fertrac/main/logo.png"
+         alt="Fertrac" class="login-logo"
+         onerror="this.style.display='none'">
+    <h2>Lista de Precios</h2>
+    <p>Inicia sesión con tu cuenta corporativa de Fertrac para continuar</p>
+    <div id="g_id_onload"
+         data-client_id="748686271759-3ebepqvfssbpn650m8pu1l6umdq093fo.apps.googleusercontent.com"
+         data-callback="handleCredential"
+         data-auto_select="true">
+    </div>
+    <div class="g_id_signin"
+         data-type="standard"
+         data-size="large"
+         data-theme="outline"
+         data-text="signin_with"
+         data-shape="rectangular"
+         data-logo_alignment="left"
+         data-width="280">
+    </div>
+    <div id="access-denied">⛔ Acceso denegado. Solo usuarios con correo @fertrac.com pueden acceder.</div>
+  </div>
+</div>
+
+<!-- APP CONTENT -->
+<div id="app-content">
 <header>
   <div style="display:flex;align-items:center;gap:14px">
     <img src="https://raw.githubusercontent.com/developments-fertrac/lista-precios-fertrac/main/logo.png"
@@ -339,6 +402,39 @@
 </main>
 
 <script>
+const CLIENT_ID = '748686271759-3ebepqvfssbpn650m8pu1l6umdq093fo.apps.googleusercontent.com';
+const ALLOWED_DOMAIN = 'fertrac.com';
+let userEmail = null;
+
+function handleCredential(response) {
+  const payload = JSON.parse(atob(response.credential.split('.')[1]));
+  const email = payload.email;
+  if (email && email.endsWith('@' + ALLOWED_DOMAIN)) {
+    userEmail = email;
+    localStorage.setItem('fertrac_user', email);
+    showApp();
+  } else {
+    document.getElementById('access-denied').style.display = 'block';
+  }
+}
+
+function showApp() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app-content').style.display = 'block';
+  initApp();
+}
+
+function checkAuth() {
+  const saved = localStorage.getItem('fertrac_user');
+  if (saved && saved.endsWith('@' + ALLOWED_DOMAIN)) {
+    userEmail = saved;
+    showApp();
+  }
+  // Otherwise login screen stays visible
+}
+
+window.onload = function() { checkAuth(); };
+
 const APPS_SCRIPT_URL = 'https://script.google.com/a/macros/fertrac.com/s/AKfycbztitt85lzEy2Bl7iecjX-IS56DHY1OOxPVlPbyvwxWZpDofLQsdh-stXxBvE_xIW3L/exec';
 const ACCESS_KEY = 'fertrac2024';
 
@@ -373,7 +469,7 @@ function loadData() {
 }
 
 // ── INIT ───────────────────────────────────────────────────────────────────
-window.onload = function() {
+function initApp() {
   const saved = loadData();
   if (saved && saved.length > 0) {
     allData = saved;
@@ -637,5 +733,6 @@ window.addEventListener('scroll', () => {
   else btn.classList.remove('visible');
 });
 </script>
+</div><!-- end app-content -->
 </body>
 </html>
