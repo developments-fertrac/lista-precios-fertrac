@@ -24,7 +24,7 @@
   body { font-family: 'Segoe UI', sans-serif; background: #f5f5f5; color: var(--text); }
   header {
     background: white;
-    padding: 10px 20px;
+    padding: 8px 16px;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -34,11 +34,16 @@
     border-bottom: 3px solid var(--green);
     box-shadow: 0 2px 8px rgba(0,0,0,0.08);
   }
+  .header-logo { height: 36px; object-fit: contain; }
   .header-title {
-    font-size: 0.95rem;
+    font-size: 0.9rem;
     font-weight: 700;
     color: var(--green);
     letter-spacing: 0.3px;
+    white-space: nowrap;
+  }
+  @media (max-width: 400px) {
+    .header-title { display: none; }
   }
   #sync-btn {
     background: var(--green);
