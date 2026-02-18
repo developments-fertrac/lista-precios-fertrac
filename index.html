@@ -3,56 +3,241 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="theme-color" content="#F47920">
+<meta name="theme-color" content="#1a5c2a">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Lista Fertrac">
 <title>Lista de Precios - Fertrac</title>
 <style>
   :root {
-    --orange: #F47920;
-    --orange-light: #F69444;
-    --orange-pale: #FEF0E6;
-    --gray-dark: #58595B;
-    --gray-mid: #888;
-    --gray-light: #f5f5f5;
-    --border: #e0e0e0;
-    --text: #333;
-    --shadow: 0 2px 8px rgba(0,0,0,0.08);
+    --green: #1a5c2a;
+    --green-light: #2d8a45;
+    --green-pale: #e8f5ec;
+    --yellow: #f5c518;
+    --border: #ddd;
+    --text: #222;
+    --subtext: #666;
+    --shadow: 0 2px 8px rgba(0,0,0,0.1);
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Segoe UI', Arial, sans-serif; background: #f5f5f5; color: var(--text); }
-
-  /* HEADER */
+  body { font-family: 'Segoe UI', sans-serif; background: #f0f4f0; color: var(--text); }
   header {
-    background: white;
-    padding: 12px 20px;
+    background: var(--green);
+    color: white;
+    padding: 14px 20px;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    border-bottom: 3px solid var(--orange);
     position: sticky;
     top: 0;
     z-index: 100;
     box-shadow: var(--shadow);
   }
-  .header-logo { height: 44px; object-fit: contain; }
-  .header-right { display: flex; align-items: center; gap: 12px; }
+  header h1 { font-size: 1.1rem; font-weight: 700; }
   #sync-btn {
-    background: var(--orange);
-    color: white;
+    background: var(--yellow);
+    color: #222;
     border: none;
-    border-radius: 6px;
-    padding: 7px 16px;
-    font-size: 0.82rem;
-    font-weight: 600;
+    border-radius: 20px;
+    padding: 6px 14px;
+    font-size: 0.8rem;
+    font-weight: 700;
     cursor: pointer;
-    transition: background 0.2s;
   }
-  #sync-btn:hover { background: var(--orange-light); }
   #sync-btn:disabled { opacity: 0.6; }
-
-  /* OFFLINE BANNER */
+  main { max-width: 900px; margin: 0 auto; padding: 16px; }
+  .instructions {
+    background: white;
+    border-left: 4px solid var(--yellow);
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin-bottom: 16px;
+    font-size: 0.82rem;
+    color: var(--subtext);
+    box-shadow: var(--shadow);
+  }
+  .instructions strong { color: var(--green); display: block; margin-bottom: 4px; }
+  .search-box {
+    background: white;
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 16px;
+    box-shadow: var(--shadow);
+  }
+  .search-row { display: flex; gap: 8px; margin-bottom: 12px; }
+  #search-input {
+    flex: 1;
+    padding: 10px 14px;
+    border: 2px solid var(--border);
+    border-radius: 8px;
+    font-size: 0.95rem;
+    outline: none;
+  }
+  #search-input:focus { border-color: var(--green-light); }
+  #clear-btn {
+    background: #eee;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 14px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    color: #555;
+  }
+  .filters-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 8px;
+  }
+  .filters-grid select {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    font-size: 0.82rem;
+    background: white;
+    outline: none;
+  }
+  .results-meta { font-size: 0.85rem; color: var(--subtext); margin-bottom: 10px; }
+  .results-meta strong { color: var(--green); }
+  .table-wrapper {
+    background: white;
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+    overflow: hidden;
+    margin-bottom: 16px;
+  }
+  table { width: 100%; border-collapse: collapse; }
+  thead { background: var(--green); color: white; }
+  thead th { padding: 11px 14px; text-align: left; font-size: 0.82rem; font-weight: 600; }
+  tbody tr { border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.15s; }
+  tbody tr:hover { background: var(--green-pale); }
+  tbody tr.selected { background: #d4edda; }
+  tbody td { padding: 10px 14px; font-size: 0.85rem; }
+  .tag {
+    background: var(--green-pale);
+    color: var(--green);
+    border-radius: 12px;
+    padding: 2px 8px;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+  .detail-panel {
+    background: white;
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+    overflow: hidden;
+    display: none;
+  }
+  .detail-panel.visible { display: block; }
+  .detail-header {
+    background: var(--green);
+    color: white;
+    padding: 14px 18px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .detail-header h2 { font-size: 1rem; }
+  .close-btn {
+    background: rgba(255,255,255,0.2);
+    border: none;
+    color: white;
+    border-radius: 50%;
+    width: 28px;
+    height: 28px;
+    cursor: pointer;
+    font-size: 1.1rem;
+  }
+  .detail-body { padding: 18px; }
+  .detail-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  @media (max-width: 600px) {
+    .detail-grid { grid-template-columns: 1fr; }
+    .filters-grid { grid-template-columns: 1fr 1fr; }
+  }
+  .detail-section h3 {
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    color: var(--subtext);
+    letter-spacing: 0.8px;
+    margin-bottom: 10px;
+    border-bottom: 2px solid var(--green-pale);
+    padding-bottom: 4px;
+  }
+  .detail-row { margin-bottom: 8px; }
+  .detail-row label { font-size: 0.75rem; color: var(--subtext); display: block; }
+  .detail-row span { font-size: 0.9rem; font-weight: 600; }
+  .price-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 10px;
+    margin-top: 8px;
+  }
+  .price-card {
+    background: var(--green-pale);
+    border-radius: 10px;
+    padding: 12px;
+    text-align: center;
+  }
+  .price-card label { font-size: 0.72rem; color: var(--subtext); display: block; margin-bottom: 4px; }
+  .price-card .amount { font-size: 1.05rem; font-weight: 700; color: var(--green); }
+  .price-card.promo { background: #fff8e1; }
+  .price-card.promo .amount { color: #e65100; }
+  .product-image {
+    width: 100%;
+    max-width: 200px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    display: block;
+    margin: 0 auto 12px;
+    object-fit: contain;
+    height: 160px;
+    background: #f5f5f5;
+  }
+  .no-image {
+    width: 100%;
+    max-width: 200px;
+    height: 160px;
+    border-radius: 10px;
+    border: 2px dashed var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--subtext);
+    font-size: 0.8rem;
+    margin: 0 auto 12px;
+  }
+  .inv-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-weight: 700;
+    font-size: 0.9rem;
+  }
+  .inv-ok { background: #d4edda; color: #155724; }
+  .inv-low { background: #fff3cd; color: #856404; }
+  .inv-none { background: #f8d7da; color: #721c24; }
+  #sync-status {
+    font-size: 0.75rem;
+    text-align: center;
+    color: var(--subtext);
+    padding: 6px;
+    margin-bottom: 10px;
+  }
+  .loading { text-align: center; padding: 40px; color: var(--subtext); }
+  .spinner {
+    width: 36px; height: 36px;
+    border: 4px solid #eee;
+    border-top-color: var(--green);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin: 0 auto 12px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .empty-state { text-align: center; padding: 40px; color: var(--subtext); font-size: 0.9rem; }
   .offline-banner {
     background: #fff3cd;
     color: #856404;
@@ -60,310 +245,15 @@
     padding: 8px;
     font-size: 0.82rem;
     display: none;
-    border-bottom: 1px solid #ffc107;
   }
   .offline-banner.visible { display: block; }
-
-  /* MAIN */
-  main { max-width: 960px; margin: 0 auto; padding: 20px 16px; }
-
-  /* HERO */
-  .hero {
-    background: white;
-    border-radius: 10px;
-    padding: 24px 28px;
-    margin-bottom: 20px;
-    box-shadow: var(--shadow);
-    display: flex;
-    gap: 24px;
-    align-items: flex-start;
-  }
-  .hero-logo { height: 70px; object-fit: contain; flex-shrink: 0; }
-  .hero-content h1 {
-    font-size: 2rem;
-    color: var(--orange);
-    font-weight: 700;
-    margin-bottom: 12px;
-  }
-  .hero-content ol { padding-left: 18px; }
-  .hero-content li { font-size: 0.88rem; color: var(--gray-dark); margin-bottom: 6px; line-height: 1.5; }
-  .hero-content .importante {
-    margin-top: 12px;
-    font-size: 0.85rem;
-    color: var(--gray-dark);
-  }
-  @media (max-width: 600px) {
-    .hero { flex-direction: column; }
-    .hero-logo { height: 50px; }
-    .hero-content h1 { font-size: 1.5rem; }
-  }
-
-  /* SEARCH SECTION */
-  .search-section {
-    background: white;
-    border-radius: 10px;
-    padding: 20px;
-    margin-bottom: 20px;
-    box-shadow: var(--shadow);
-  }
-  .search-input-wrap {
-    position: relative;
-    margin-bottom: 16px;
-  }
-  #search-input {
-    width: 100%;
-    padding: 11px 16px;
-    border: 1.5px solid var(--border);
-    border-radius: 8px;
-    font-size: 0.95rem;
-    outline: none;
-    color: var(--text);
-    transition: border 0.2s;
-  }
-  #search-input::placeholder { color: #aaa; }
-  #search-input:focus { border-color: var(--orange); }
-
-  .filters-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-    gap: 10px;
-    margin-bottom: 14px;
-  }
-  .filters-grid select {
-    width: 100%;
-    padding: 9px 12px;
-    border: 1.5px solid var(--border);
-    border-radius: 8px;
-    font-size: 0.83rem;
-    background: white;
-    color: var(--text);
-    outline: none;
-    cursor: pointer;
-    font-weight: 500;
-    text-transform: uppercase;
-    letter-spacing: 0.3px;
-  }
-  .filters-grid select:focus { border-color: var(--orange); }
-
-  #clear-btn {
-    display: block;
-    width: 100%;
-    max-width: 260px;
-    margin: 0 auto;
-    padding: 10px;
-    background: white;
-    border: 2px dashed var(--border);
-    border-radius: 24px;
-    font-size: 0.88rem;
-    color: var(--gray-mid);
-    cursor: pointer;
-    transition: all 0.2s;
-    letter-spacing: 0.3px;
-  }
-  #clear-btn:hover { border-color: var(--orange); color: var(--orange); }
-
-  /* RESULTS */
-  .results-section {
-    background: white;
-    border-radius: 10px;
-    box-shadow: var(--shadow);
-    overflow: hidden;
-    margin-bottom: 20px;
-  }
-  .results-header {
-    padding: 14px 20px;
-    display: flex;
-    align-items: baseline;
-    gap: 10px;
-    border-bottom: 1px solid var(--border);
-  }
-  .results-header h2 { font-size: 1.1rem; color: var(--text); font-weight: 700; }
-  .results-count {
-    font-size: 0.85rem;
-    color: var(--gray-mid);
-    font-weight: 400;
-  }
-  table { width: 100%; border-collapse: collapse; }
-  thead { background: var(--gray-light); }
-  thead th {
-    padding: 10px 16px;
-    text-align: left;
-    font-size: 0.8rem;
-    font-weight: 700;
-    color: var(--gray-dark);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    border-bottom: 2px solid var(--border);
-  }
-  tbody tr { border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.12s; }
-  tbody tr:hover { background: var(--orange-pale); }
-  tbody tr.selected { background: #fde8d4; }
-  tbody td { padding: 10px 16px; font-size: 0.85rem; }
-  .ref-cell { font-weight: 700; color: var(--gray-dark); font-size: 0.82rem; }
-  .marca-tag {
-    background: var(--orange-pale);
-    color: var(--orange);
-    border-radius: 4px;
-    padding: 2px 8px;
-    font-size: 0.75rem;
-    font-weight: 700;
-    white-space: nowrap;
-  }
-
-  /* DETAIL */
-  .detail-panel {
-    background: white;
-    border-radius: 10px;
-    box-shadow: var(--shadow);
-    overflow: hidden;
-    display: none;
-    margin-bottom: 20px;
-  }
-  .detail-panel.visible { display: block; }
-  .detail-close-row {
-    display: flex;
-    justify-content: flex-end;
-    padding: 10px 16px 0;
-  }
-  .close-btn {
-    background: none;
-    border: 1.5px solid var(--border);
-    border-radius: 50%;
-    width: 28px;
-    height: 28px;
-    cursor: pointer;
-    font-size: 1rem;
-    color: var(--gray-mid);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  .close-btn:hover { border-color: var(--orange); color: var(--orange); }
-
-  .detail-body { padding: 0 20px 20px; }
-
-  /* IMAGE */
-  .product-img-wrap {
-    text-align: center;
-    margin-bottom: 16px;
-  }
-  .product-image {
-    max-width: 240px;
-    width: 100%;
-    border: 2px solid var(--orange);
-    border-radius: 8px;
-    object-fit: contain;
-    height: 200px;
-    background: #fafafa;
-    display: block;
-    margin: 0 auto;
-  }
-  .no-image {
-    max-width: 240px;
-    height: 200px;
-    border: 2px dashed var(--border);
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--gray-mid);
-    font-size: 0.8rem;
-    margin: 0 auto;
-  }
-  .ver-completa {
-    display: block;
-    text-align: center;
-    margin-top: 6px;
-    font-size: 0.8rem;
-    color: var(--orange);
-    text-decoration: underline;
-    cursor: pointer;
-  }
-
-  /* INFO TABLES */
-  .info-section { margin-bottom: 20px; }
-  .info-section-title {
-    color: var(--orange);
-    font-size: 1rem;
-    font-weight: 700;
-    text-align: center;
-    margin-bottom: 10px;
-  }
-  .info-table { width: 100%; border-collapse: collapse; border: 1.5px solid var(--orange); border-radius: 8px; overflow: hidden; }
-  .info-table tr { border-bottom: 1px solid var(--border); }
-  .info-table tr:last-child { border-bottom: none; }
-  .info-table td:first-child {
-    background: var(--gray-light);
-    font-size: 0.75rem;
-    font-weight: 700;
-    color: var(--gray-dark);
-    text-transform: uppercase;
-    padding: 9px 14px;
-    width: 40%;
-    vertical-align: top;
-  }
-  .info-table td:last-child {
-    padding: 9px 14px;
-    font-size: 0.85rem;
-    color: var(--text);
-  }
-
-  .detail-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 20px;
-  }
-  @media (max-width: 640px) {
-    .detail-grid { grid-template-columns: 1fr; }
-    .filters-grid { grid-template-columns: 1fr 1fr; }
-  }
-
-  /* BADGES */
-  .inv-badge {
-    display: inline-block;
-    padding: 3px 10px;
-    border-radius: 4px;
-    font-weight: 700;
-    font-size: 0.85rem;
-  }
-  .inv-ok { background: #d4edda; color: #155724; }
-  .inv-low { background: #fff3cd; color: #856404; }
-  .inv-none { background: #f8d7da; color: #721c24; }
-
-  /* STATUS */
-  #sync-status {
-    font-size: 0.75rem;
-    text-align: center;
-    color: var(--gray-mid);
-    padding: 5px;
-    margin-bottom: 8px;
-  }
-
-  /* LOADING */
-  .loading { text-align: center; padding: 40px; color: var(--gray-mid); }
-  .spinner {
-    width: 36px; height: 36px;
-    border: 4px solid #eee;
-    border-top-color: var(--orange);
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
-    margin: 0 auto 12px;
-  }
-  @keyframes spin { to { transform: rotate(360deg); } }
-  .empty-state { text-align: center; padding: 40px; color: var(--gray-mid); font-size: 0.9rem; }
-  .more-results { text-align: center; padding: 10px; font-size: 0.8rem; color: var(--gray-mid); border-top: 1px solid var(--border); }
 </style>
 </head>
 <body>
 
 <header>
-  <img src="https://raw.githubusercontent.com/developments-fertrac/lista-precios-fertrac/main/logo.png"
-       alt="Fertrac" class="header-logo"
-       onerror="this.style.display='none'">
-  <div class="header-right">
-    <div id="sync-status"></div>
-    <button id="sync-btn" onclick="syncData()">🔄 Sincronizar</button>
-  </div>
+  <h1>🌱 Lista de Precios — Fertrac</h1>
+  <button id="sync-btn" onclick="syncData()">🔄 Sincronizar</button>
 </header>
 
 <div class="offline-banner" id="offline-banner">
@@ -371,59 +261,43 @@
 </div>
 
 <main>
+  <div id="sync-status"></div>
 
-  <!-- HERO -->
-  <div class="hero">
-    <img src="https://raw.githubusercontent.com/developments-fertrac/lista-precios-fertrac/main/logo.png"
-         alt="Fertrac" class="hero-logo"
-         onerror="this.style.display='none'">
-    <div class="hero-content">
-      <h1>Lista de Precios</h1>
-      <ol>
-        <li>Haz clic en <strong>"Limpiar filtros"</strong> (antes de cada consulta).</li>
-        <li>Escribe una palabra clave o referencia en el buscador.</li>
-        <li>(Opcional) Filtra por Categoría / Subcategoría / Línea / Marca / Aplicación.</li>
-        <li>En Resultados, haz clic en la referencia para ver la información completa.</li>
-      </ol>
-      <p class="importante"><strong>Importante:</strong> Para hacer una nueva búsqueda, vuelve a presionar <strong>"Limpiar filtros"</strong>.</p>
-    </div>
+  <div class="instructions">
+    <strong>📋 Cómo usar:</strong>
+    1. Escribe una palabra clave o referencia en el buscador. &nbsp;&nbsp;
+    2. Usa los filtros para refinar. &nbsp;&nbsp;
+    3. Toca un producto para ver el detalle completo.
   </div>
 
-  <!-- SEARCH -->
-  <div class="search-section">
-    <div class="search-input-wrap">
-      <input type="text" id="search-input" placeholder="Introduzca un valor" oninput="applyFilters()">
+  <div class="search-box">
+    <div class="search-row">
+      <input type="text" id="search-input" placeholder="🔍 Buscar por referencia, producto, marca..." oninput="applyFilters()">
+      <button id="clear-btn" onclick="clearAll()">🧹 Limpiar</button>
     </div>
     <div class="filters-grid">
-      <select id="f-categoria" onchange="applyFilters()"><option value="">CATEGORÍA</option></select>
-      <select id="f-subcategoria" onchange="applyFilters()"><option value="">SUBCATEGORÍA</option></select>
-      <select id="f-tipo" onchange="applyFilters()"><option value="">TIPO DE PRODUCTO</option></select>
-      <select id="f-linea" onchange="applyFilters()"><option value="">LÍNEA</option></select>
-      <select id="f-marca" onchange="applyFilters()"><option value="">MARCA</option></select>
-      <select id="f-aplicacion" onchange="applyFilters()"><option value="">APLICACIÓN</option></select>
+      <select id="f-categoria" onchange="applyFilters()"><option value="">Categoría</option></select>
+      <select id="f-subcategoria" onchange="applyFilters()"><option value="">Subcategoría</option></select>
+      <select id="f-tipo" onchange="applyFilters()"><option value="">Tipo de producto</option></select>
+      <select id="f-linea" onchange="applyFilters()"><option value="">Línea</option></select>
+      <select id="f-marca" onchange="applyFilters()"><option value="">Marca</option></select>
+      <select id="f-aplicacion" onchange="applyFilters()"><option value="">Aplicación</option></select>
     </div>
-    <button id="clear-btn" onclick="clearAll()">Limpiar filtros</button>
   </div>
 
-  <!-- DETAIL PANEL -->
+  <div class="results-meta" id="results-meta"></div>
+
+  <div class="table-wrapper" id="table-wrapper">
+    <div class="empty-state">Cargando datos...</div>
+  </div>
+
   <div class="detail-panel" id="detail-panel">
-    <div class="detail-close-row">
+    <div class="detail-header">
+      <h2 id="detail-title">Detalle del producto</h2>
       <button class="close-btn" onclick="closeDetail()">✕</button>
     </div>
     <div class="detail-body" id="detail-body"></div>
   </div>
-
-  <!-- RESULTS -->
-  <div class="results-section" id="results-section">
-    <div class="results-header">
-      <h2>Resultados</h2>
-      <span class="results-count" id="results-meta"></span>
-    </div>
-    <div id="table-wrapper">
-      <div class="empty-state">Cargando datos...</div>
-    </div>
-  </div>
-
 </main>
 
 <script>
@@ -444,7 +318,7 @@ let filtered = [];
 // ── SERVICE WORKER ─────────────────────────────────────────────────────────
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/lista-precios-fertrac/sw.js', { scope: '/lista-precios-fertrac/' })
-    .then(() => console.log('SW registrado'))
+    .then(() => console.log('SW registrado correctamente'))
     .catch(err => console.log('SW error:', err));
 }
 
@@ -453,7 +327,7 @@ function saveData(data) {
   try {
     localStorage.setItem('fertrac_data', JSON.stringify(data));
     localStorage.setItem('fertrac_updated', new Date().toLocaleString('es-CO'));
-  } catch(e) {}
+  } catch(e) { console.warn('Storage full', e); }
 }
 function loadData() {
   try { const d = localStorage.getItem('fertrac_data'); return d ? JSON.parse(d) : null; }
@@ -466,24 +340,30 @@ window.onload = function() {
   if (saved && saved.length > 0) {
     allData = saved;
     const ts = localStorage.getItem('fertrac_updated');
-    document.getElementById('sync-status').textContent = ts ? '✅ ' + ts : '';
-    buildFilters(); applyFilters();
+    document.getElementById('sync-status').textContent = ts ? 'Última sincronización: ' + ts : '';
+    buildFilters();
+    applyFilters();
   } else {
     document.getElementById('table-wrapper').innerHTML =
       '<div class="empty-state">Conéctate a internet para cargar los datos por primera vez</div>';
   }
-  if (navigator.onLine) syncData();
-  else showOfflineBanner();
-  window.addEventListener('online', () => { hideOfflineBanner(); syncData(); });
+
+  if (navigator.onLine) {
+    syncData();
+  } else {
+    showOfflineBanner();
+  }
+
+  window.addEventListener('online', () => {
+    document.getElementById('offline-banner').classList.remove('visible');
+    syncData();
+  });
   window.addEventListener('offline', () => showOfflineBanner());
 };
 
 function showOfflineBanner() {
   document.getElementById('offline-banner').classList.add('visible');
   document.getElementById('sync-status').textContent = '';
-}
-function hideOfflineBanner() {
-  document.getElementById('offline-banner').classList.remove('visible');
 }
 
 // ── SYNC ───────────────────────────────────────────────────────────────────
@@ -494,44 +374,48 @@ async function syncData() {
   status.textContent = '🔄 Sincronizando...';
   btn.textContent = '🔄 Cargando...';
   btn.disabled = true;
+
   if (allData.length === 0) {
     document.getElementById('table-wrapper').innerHTML =
       '<div class="loading"><div class="spinner"></div>Cargando datos...</div>';
   }
+
   try {
     const res = await fetch(APPS_SCRIPT_URL + '?key=' + ACCESS_KEY);
     const json = await res.json();
     if (json.error) throw new Error(json.error);
+
     allData = json.data.slice(1).map(row =>
       row.map(cell => cell === null || cell === undefined ? '' : String(cell).trim())
     );
+
     saveData(allData);
     const ts = localStorage.getItem('fertrac_updated');
-    status.textContent = '✅ ' + ts;
+    status.textContent = '✅ Sincronizado: ' + ts + ' | ' + allData.length + ' productos';
     btn.textContent = '🔄 Sincronizar';
     btn.disabled = false;
-    buildFilters(); applyFilters();
+    buildFilters();
+    applyFilters();
   } catch(e) {
-    status.textContent = '';
+    status.textContent = '⚠️ Error al sincronizar';
     btn.textContent = '🔄 Sincronizar';
     btn.disabled = false;
-    showOfflineBanner();
     const saved = loadData();
     if (saved && saved.length > 0) { allData = saved; buildFilters(); applyFilters(); }
     else document.getElementById('table-wrapper').innerHTML =
-      '<div class="empty-state">Sin datos guardados. Conéctate a internet para sincronizar.</div>';
+      '<div class="empty-state">No hay datos guardados. Conéctate a internet para sincronizar.</div>';
   }
 }
 
 // ── FILTERS ────────────────────────────────────────────────────────────────
 function buildFilters() {
   const fields = [
-    { id: 'f-categoria', col: C.CATEGORIA, label: 'CATEGORÍA' },
-    { id: 'f-subcategoria', col: C.SUBCATEGORIA, label: 'SUBCATEGORÍA' },
-    { id: 'f-tipo', col: C.TIPO, label: 'TIPO DE PRODUCTO' },
-    { id: 'f-linea', col: C.LINEA, label: 'LÍNEA' },
-    { id: 'f-marca', col: C.MARCA, label: 'MARCA' },
-    { id: 'f-aplicacion', col: C.APLICACION, label: 'APLICACIÓN' },
+    { id: 'f-categoria', col: C.CATEGORIA, label: 'Categoría' },
+    { id: 'f-subcategoria', col: C.SUBCATEGORIA, label: 'Subcategoría' },
+    { id: 'f-tipo', col: C.TIPO, label: 'Tipo de producto' },
+    { id: 'f-linea', col: C.LINEA, label: 'Línea' },
+    { id: 'f-marca', col: C.MARCA, label: 'Marca' },
+    { id: 'f-aplicacion', col: C.APLICACION, label: 'Aplicación' },
   ];
   fields.forEach(f => {
     const sel = document.getElementById(f.id);
@@ -549,6 +433,7 @@ function applyFilters() {
   const linea = document.getElementById('f-linea').value;
   const marca = document.getElementById('f-marca').value;
   const aplic = document.getElementById('f-aplicacion').value;
+
   filtered = allData.filter(r => {
     if (q && !(r[C.REF]+' '+r[C.PRODUCTO]+' '+r[C.MARCA]+' '+r[C.ALTERNOS]).toLowerCase().includes(q)) return false;
     if (cat && r[C.CATEGORIA] !== cat) return false;
@@ -559,9 +444,12 @@ function applyFilters() {
     if (aplic && r[C.APLICACION] !== aplic) return false;
     return true;
   });
+
   renderTable();
-  document.getElementById('results-meta').textContent =
-    allData.length > 0 ? filtered.length + ' de ' + allData.length : '';
+  document.getElementById('results-meta').innerHTML =
+    allData.length > 0
+      ? 'Mostrando <strong>' + filtered.length + '</strong> de <strong>' + allData.length + '</strong> productos'
+      : '';
 }
 
 function clearAll() {
@@ -583,84 +471,90 @@ function renderTable() {
   const rows = show.map(r => {
     const idx = allData.indexOf(r);
     return '<tr onclick="showDetail(' + idx + ')" data-idx="' + idx + '">' +
-      '<td class="ref-cell">' + (r[C.REF]||'—') + '</td>' +
-      '<td><span class="marca-tag">' + (r[C.MARCA]||'—') + '</span></td>' +
+      '<td><strong>' + (r[C.REF]||'—') + '</strong></td>' +
+      '<td><span class="tag">' + (r[C.MARCA]||'—') + '</span></td>' +
       '<td>' + (r[C.PRODUCTO]||'—') + '</td>' +
+      '<td>' + formatPrice(r[C.PRECIO_BRUTO]) + '</td>' +
       '</tr>';
   }).join('');
   wrapper.innerHTML =
-    '<table><thead><tr><th>REFERENCIA</th><th>MARCA</th><th>PRODUCTO ▲</th></tr></thead>' +
+    '<table><thead><tr><th>Referencia</th><th>Marca</th><th>Producto</th><th>Precio Bruto</th></tr></thead>' +
     '<tbody>' + rows + '</tbody></table>' +
-    (filtered.length > 200 ? '<div class="more-results">Mostrando 200 de ' + filtered.length + ' resultados. Refina tu búsqueda.</div>' : '');
+    (filtered.length > 200 ? '<div style="text-align:center;padding:10px;font-size:0.8rem;color:#888">Mostrando 200 de ' + filtered.length + ' resultados. Refina tu búsqueda.</div>' : '');
 }
 
 // ── DETAIL ─────────────────────────────────────────────────────────────────
 function extractDriveId(url) {
   if (!url) return null;
-  const m1 = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
-  if (m1) return m1[1];
-  const m2 = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
-  if (m2) return m2[1];
+  const match = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+  if (match) return match[1];
+  const match2 = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+  if (match2) return match2[1];
   return null;
 }
 
-async function loadImage(fileId, imgEl) {
+async function loadImage(fileId, imgElement) {
   try {
     const res = await fetch(APPS_SCRIPT_URL + '?key=' + ACCESS_KEY + '&img=' + fileId);
     const dataUrl = await res.text();
-    if (dataUrl.startsWith('data:')) imgEl.src = dataUrl;
-    else imgEl.style.display = 'none';
-  } catch(e) { imgEl.style.display = 'none'; }
+    if (dataUrl.startsWith('data:')) imgElement.src = dataUrl;
+  } catch(e) {
+    imgElement.style.display = 'none';
+  }
 }
 
 function showDetail(idx) {
   const r = allData[idx];
   if (!r) return;
+
   document.querySelectorAll('tbody tr').forEach(tr => tr.classList.remove('selected'));
   const tr = document.querySelector('tr[data-idx="' + idx + '"]');
   if (tr) tr.classList.add('selected');
 
   const inv = parseFloat(r[C.INV]) || 0;
   const invClass = inv > 10 ? 'inv-ok' : inv > 0 ? 'inv-low' : 'inv-none';
-  const invText = inv > 10 ? inv + ' und.' : inv > 0 ? inv + ' und. (bajo)' : 'Sin stock';
+  const invText = inv > 10 ? inv + ' unidades' : inv > 0 ? inv + ' unidades (bajo)' : 'Sin stock';
+
   const fileId = extractDriveId(r[C.FOTO]);
-
   const imgHtml = fileId
-    ? '<div class="product-img-wrap"><img id="detail-img" class="product-image" alt="Foto producto"><a class="ver-completa" id="ver-completa-link">Ver imagen completa</a></div>'
-    : '<div class="product-img-wrap"><div class="no-image">Sin imagen</div></div>';
+    ? '<img id="detail-img" class="product-image" alt="Foto producto">'
+    : '<div class="no-image">Sin imagen</div>';
 
+  document.getElementById('detail-title').textContent = r[C.REF] || 'Detalle';
   document.getElementById('detail-body').innerHTML =
     '<div class="detail-grid">' +
       '<div>' +
         imgHtml +
-        '<div class="info-section">' +
-          '<div class="info-section-title">Información del producto</div>' +
-          '<table class="info-table">' +
-            irow('REFERENCIA', r[C.REF]) +
-            irow('REFERENCIAS ALTERNAS Y/O INTERCAMBIO', r[C.ALTERNOS] || 'No hay datos') +
-            irow('PRODUCTO', r[C.PRODUCTO]) +
-            irow('LÍNEA', r[C.LINEA]) +
-            irow('MARCA', r[C.MARCA]) +
-            irow('APLICACIÓN', r[C.APLICACION]) +
-          '</table>' +
+        '<div class="detail-section">' +
+          '<h3>🛠 Información técnica</h3>' +
+          drow('Referencia', r[C.REF]) +
+          drow('Producto', r[C.PRODUCTO]) +
+          drow('Marca', r[C.MARCA]) +
+          drow('Línea', r[C.LINEA]) +
+          drow('Aplicación', r[C.APLICACION]) +
+          drow('Refs. alternas / intercambio', r[C.ALTERNOS]) +
         '</div>' +
       '</div>' +
       '<div>' +
-        '<div class="info-section">' +
-          '<div class="info-section-title">Información comercial</div>' +
-          '<table class="info-table">' +
-            irow('CONDICIÓN', r[C.CONDICION] || 'No hay datos') +
-            '<tr><td>INV.</td><td><span class="inv-badge ' + invClass + '">' + invText + '</span></td></tr>' +
-            irow('PRECIO BRUTO UNITARIO', formatPrice(r[C.PRECIO_BRUTO])) +
-            irow('NETO -5%', formatPrice(r[C.NETO_5])) +
-            irow('NETO -8%', formatPrice(r[C.NETO_8])) +
-            irow('PRECIO PROMO NETO X ESCALA', formatPrice(r[C.PRECIO_PROMO])) +
-            irow('UND ESCALA IGUAL O MAYOR', r[C.UND_ESCALA] || '0') +
-            irow('UND MIN VTA', r[C.UND_MIN] || '0') +
-            irow('UND MAX VTA', r[C.UND_MAX] || '0') +
-            irow('PROMO FINALIZA EN:', r[C.PROMO_FIN] || '0') +
-            irow('UND RMC', r[C.UND_RMC] || '0') +
-          '</table>' +
+        '<div class="detail-section">' +
+          '<h3>💰 Precios</h3>' +
+          '<div class="price-cards">' +
+            pcard('Precio Bruto', r[C.PRECIO_BRUTO], false) +
+            pcard('Neto -5%', r[C.NETO_5], false) +
+            pcard('Neto -8%', r[C.NETO_8], false) +
+            (r[C.PRECIO_PROMO] ? pcard('🔥 Precio Promo', r[C.PRECIO_PROMO], true) : '') +
+          '</div>' +
+        '</div>' +
+        '<div class="detail-section" style="margin-top:16px">' +
+          '<h3>📦 Información comercial</h3>' +
+          drow('Condición', r[C.CONDICION]) +
+          '<div class="detail-row"><label>Inventario</label><span class="inv-badge ' + invClass + '">' + invText + '</span></div>' +
+          drow('Unid. mín. de venta', r[C.UND_MIN]) +
+          drow('Unid. máx. de venta', r[C.UND_MAX]) +
+          drow('Escala (≥ unidades)', r[C.UND_ESCALA]) +
+          drow('Und. RM', r[C.UND_RM]) +
+          drow('Und. RMC', r[C.UND_RMC]) +
+          (r[C.PROMO_FIN] ? '<div class="detail-row"><label>Promo finaliza en</label><span style="color:#e65100;font-weight:700">' + r[C.PROMO_FIN] + '</span></div>' : '') +
         '</div>' +
       '</div>' +
     '</div>';
@@ -669,13 +563,10 @@ function showDetail(idx) {
   panel.classList.add('visible');
   panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
+  // Load image async if online
   if (fileId && navigator.onLine) {
     const imgEl = document.getElementById('detail-img');
-    if (imgEl) {
-      loadImage(fileId, imgEl);
-      const verLink = document.getElementById('ver-completa-link');
-      if (verLink) verLink.onclick = () => window.open(r[C.FOTO], '_blank');
-    }
+    if (imgEl) loadImage(fileId, imgEl);
   }
 }
 
@@ -684,14 +575,17 @@ function closeDetail() {
   document.querySelectorAll('tbody tr').forEach(tr => tr.classList.remove('selected'));
 }
 
-function irow(label, val) {
-  return '<tr><td>' + label + '</td><td>' + (val||'—') + '</td></tr>';
+function drow(label, val) {
+  return '<div class="detail-row"><label>' + label + '</label><span>' + (val||'—') + '</span></div>';
+}
+function pcard(label, val, isPromo) {
+  return '<div class="price-card' + (isPromo?' promo':'') + '"><label>' + label + '</label><div class="amount">' + formatPrice(val) + '</div></div>';
 }
 function formatPrice(val) {
-  if (!val || val === '0') return '$0';
+  if (!val) return '—';
   const n = parseFloat(String(val).replace(/[^0-9.]/g, ''));
   if (isNaN(n)) return val;
-  return '$ ' + n.toLocaleString('es-CO', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+  return '$' + n.toLocaleString('es-CO', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 }
 </script>
 </body>
