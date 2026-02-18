@@ -484,6 +484,14 @@ function renderTable() {
     (filtered.length > 200 ? '<div style="text-align:center;padding:10px;font-size:0.8rem;color:#888">Mostrando los primeros 200 resultados. Refina tu búsqueda para ver más.</div>' : '');
 }
 
+function convertDriveUrl(url) {
+  const match = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+  if (match) return 'https://lh3.googleusercontent.com/d/' + match[1];
+  const match2 = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+  if (match2) return 'https://lh3.googleusercontent.com/d/' + match2[1];
+  return url;
+}
+
 function showDetail(idx) {
   const r = allData[idx];
   if (!r) return;
@@ -494,7 +502,8 @@ function showDetail(idx) {
   const inv = parseFloat(r[C.INV]) || 0;
   const invClass = inv > 10 ? 'inv-ok' : inv > 0 ? 'inv-low' : 'inv-none';
   const invText = inv > 10 ? inv + ' unidades' : inv > 0 ? inv + ' unidades (bajo)' : 'Sin stock';
-  const imgUrl = r[C.FOTO];
+  const rawUrl = r[C.FOTO];
+  const imgUrl = rawUrl ? convertDriveUrl(rawUrl) : '';
   const imgHtml = imgUrl
     ? '<img src="' + imgUrl + '" class="product-image" alt="Foto" onerror="this.style.display=\'none\'">'
     : '<div class="no-image">Sin imagen</div>';
