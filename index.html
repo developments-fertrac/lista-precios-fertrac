@@ -486,10 +486,22 @@ function renderTable() {
 
 function convertDriveUrl(url) {
   const match = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
-  if (match) return 'https://lh3.googleusercontent.com/d/' + match[1];
+  if (match) return match[1];
   const match2 = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
-  if (match2) return 'https://lh3.googleusercontent.com/d/' + match2[1];
-  return url;
+  if (match2) return match2[1];
+  return null;
+}
+
+async function loadImage(url, imgElement) {
+  const fileId = convertDriveUrl(url);
+  if (!fileId) return;
+  try {
+    const res = await fetch(APPS_SCRIPT_URL + '?key=fertrac2024&img=' + fileId);
+    const dataUrl = await res.text();
+    imgElement.src = dataUrl;
+  } catch(e) {
+    imgElement.style.display = 'none';
+  }
 }
 
 function showDetail(idx) {
@@ -550,6 +562,10 @@ function showDetail(idx) {
   const panel = document.getElementById('detail-panel');
   panel.classList.add('visible');
   panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  if (hasImage && rawUrl) {
+    const imgEl = document.getElementById('detail-img');
+    if (imgEl) loadImage(rawUrl, imgEl);
+  }
 }
 
 function row(label, val) {
