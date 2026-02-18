@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#1a5c2a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Lista Fertrac">
 <title>Lista de Precios - Fertrac</title>
 <style>
   :root {
@@ -11,7 +14,6 @@
     --green-light: #2d8a45;
     --green-pale: #e8f5ec;
     --yellow: #f5c518;
-    --gray: #f4f4f4;
     --border: #ddd;
     --text: #222;
     --subtext: #666;
@@ -42,6 +44,7 @@
     font-weight: 700;
     cursor: pointer;
   }
+  #sync-btn:disabled { opacity: 0.6; }
   main { max-width: 900px; margin: 0 auto; padding: 16px; }
   .instructions {
     background: white;
@@ -150,7 +153,6 @@
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 16px;
-    margin-bottom: 16px;
   }
   @media (max-width: 600px) {
     .detail-grid { grid-template-columns: 1fr; }
@@ -170,7 +172,7 @@
   .detail-row span { font-size: 0.9rem; font-weight: 600; }
   .price-cards {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
     gap: 10px;
     margin-top: 8px;
   }
@@ -193,7 +195,7 @@
     margin: 0 auto 12px;
     object-fit: contain;
     height: 160px;
-    background: #fafafa;
+    background: #f5f5f5;
   }
   .no-image {
     width: 100%;
@@ -236,73 +238,35 @@
   }
   @keyframes spin { to { transform: rotate(360deg); } }
   .empty-state { text-align: center; padding: 40px; color: var(--subtext); font-size: 0.9rem; }
-  .modal-overlay {
+  .offline-banner {
+    background: #fff3cd;
+    color: #856404;
+    text-align: center;
+    padding: 8px;
+    font-size: 0.82rem;
     display: none;
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.5);
-    z-index: 200;
-    align-items: center;
-    justify-content: center;
   }
-  .modal-overlay.open { display: flex; }
-  .modal {
-    background: white;
-    border-radius: 14px;
-    padding: 24px;
-    max-width: 420px;
-    width: 90%;
-    box-shadow: 0 10px 40px rgba(0,0,0,0.2);
-  }
-  .modal h2 { color: var(--green); margin-bottom: 8px; font-size: 1.1rem; }
-  .modal p { font-size: 0.85rem; color: var(--subtext); margin-bottom: 16px; }
-  .modal input {
-    width: 100%;
-    padding: 10px 14px;
-    border: 2px solid var(--border);
-    border-radius: 8px;
-    font-size: 0.9rem;
-    margin-bottom: 12px;
-    outline: none;
-  }
-  .modal-btns { display: flex; gap: 8px; justify-content: flex-end; }
-  .btn-primary {
-    background: var(--green);
-    color: white;
-    border: none;
-    border-radius: 8px;
-    padding: 10px 20px;
-    font-size: 0.9rem;
-    font-weight: 600;
-    cursor: pointer;
-  }
-  .btn-secondary {
-    background: #eee;
-    color: #555;
-    border: none;
-    border-radius: 8px;
-    padding: 10px 20px;
-    font-size: 0.9rem;
-    cursor: pointer;
-  }
+  .offline-banner.visible { display: block; }
 </style>
 </head>
 <body>
 
 <header>
-  <div>
-    <h1>🌱 Lista de Precios — Fertrac</h1>
-  </div>
+  <h1>🌱 Lista de Precios — Fertrac</h1>
   <button id="sync-btn" onclick="syncData()">🔄 Sincronizar</button>
 </header>
 
+<div class="offline-banner" id="offline-banner">
+  📵 Sin conexión — mostrando datos guardados
+</div>
+
 <main>
-  <div id="sync-status">Sin datos. Configura tu Google Sheet para comenzar.</div>
+  <div id="sync-status"></div>
 
   <div class="instructions">
     <strong>📋 Cómo usar:</strong>
     1. Escribe una palabra clave o referencia en el buscador. &nbsp;&nbsp;
-    2. Usa los filtros para refinar resultados. &nbsp;&nbsp;
+    2. Usa los filtros para refinar. &nbsp;&nbsp;
     3. Toca un producto para ver el detalle completo.
   </div>
 
@@ -324,7 +288,7 @@
   <div class="results-meta" id="results-meta"></div>
 
   <div class="table-wrapper" id="table-wrapper">
-    <div class="empty-state">Configura tu fuente de datos para ver los productos</div>
+    <div class="empty-state">Cargando datos...</div>
   </div>
 
   <div class="detail-panel" id="detail-panel">
@@ -336,13 +300,9 @@
   </div>
 </main>
 
-  </div>
-</div>
-
 <script>
-let allData = [];
-let filtered = [];
-
+const APPS_SCRIPT_URL = 'https://script.google.com/a/macros/fertrac.com/s/AKfycbztitt85lzEy2Bl7iecjX-IS56DHY1OOxPVlPbyvwxWZpDofLQsdh-stXxBvE_xIW3L/exec';
+const ACCESS_KEY = 'fertrac2024';
 
 const C = {
   REF: 0, FOTO: 1, ALTERNOS: 2, PRODUCTO: 3, CATEGORIA: 4,
@@ -352,6 +312,38 @@ const C = {
   INV: 18, UND_RM: 19, UND_RMC: 20, CONDICION: 21
 };
 
+let allData = [];
+let filtered = [];
+
+// ── SERVICE WORKER ─────────────────────────────────────────────────────────
+if ('serviceWorker' in navigator) {
+  const swCode = `
+    const CACHE = 'fertrac-v1';
+    self.addEventListener('install', e => {
+      e.waitUntil(
+        caches.open(CACHE).then(cache => cache.addAll(['/lista-precios-fertrac/', '/lista-precios-fertrac/index.html']))
+      );
+      self.skipWaiting();
+    });
+    self.addEventListener('activate', e => {
+      e.waitUntil(caches.keys().then(keys =>
+        Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))
+      ));
+      self.clients.claim();
+    });
+    self.addEventListener('fetch', e => {
+      e.respondWith(
+        fetch(e.request).catch(() => caches.match(e.request))
+      );
+    });
+  `;
+  const blob = new Blob([swCode], { type: 'application/javascript' });
+  const swUrl = URL.createObjectURL(blob);
+  navigator.serviceWorker.register(swUrl, { scope: '/lista-precios-fertrac/' })
+    .catch(err => console.log('SW error:', err));
+}
+
+// ── STORAGE ────────────────────────────────────────────────────────────────
 function saveData(data) {
   try {
     localStorage.setItem('fertrac_data', JSON.stringify(data));
@@ -362,53 +354,81 @@ function loadData() {
   try { const d = localStorage.getItem('fertrac_data'); return d ? JSON.parse(d) : null; }
   catch(e) { return null; }
 }
-const APPS_SCRIPT_URL = 'https://script.google.com/a/macros/fertrac.com/s/AKfycbztitt85lzEy2Bl7iecjX-IS56DHY1OOxPVlPbyvwxWZpDofLQsdh-stXxBvE_xIW3L/exec';
 
+// ── INIT ───────────────────────────────────────────────────────────────────
 window.onload = function() {
   const saved = loadData();
   if (saved && saved.length > 0) {
     allData = saved;
     const ts = localStorage.getItem('fertrac_updated');
-    document.getElementById('sync-status').textContent = ts ? 'Última sincronización: ' + ts : 'Datos en caché disponibles';
-    buildFilters(); applyFilters();
+    document.getElementById('sync-status').textContent = ts ? 'Última sincronización: ' + ts : '';
+    buildFilters();
+    applyFilters();
+  } else {
+    document.getElementById('table-wrapper').innerHTML =
+      '<div class="empty-state">Conéctate a internet para cargar los datos por primera vez</div>';
   }
-  if (navigator.onLine) syncData();
-  window.addEventListener('online', () => syncData());
+
+  if (navigator.onLine) {
+    syncData();
+  } else {
+    showOfflineBanner();
+  }
+
+  window.addEventListener('online', () => {
+    document.getElementById('offline-banner').classList.remove('visible');
+    syncData();
+  });
+  window.addEventListener('offline', () => showOfflineBanner());
 };
 
+function showOfflineBanner() {
+  document.getElementById('offline-banner').classList.add('visible');
+  document.getElementById('sync-status').textContent = '';
+}
+
+// ── SYNC ───────────────────────────────────────────────────────────────────
 async function syncData() {
+  if (!navigator.onLine) { showOfflineBanner(); return; }
   const status = document.getElementById('sync-status');
   const btn = document.getElementById('sync-btn');
-  status.textContent = '🔄 Sincronizando datos...';
+  status.textContent = '🔄 Sincronizando...';
   btn.textContent = '🔄 Cargando...';
   btn.disabled = true;
-  const wrapper = document.getElementById('table-wrapper');
+
   if (allData.length === 0) {
-    wrapper.innerHTML = '<div class="loading"><div class="spinner"></div>Cargando datos...</div>';
+    document.getElementById('table-wrapper').innerHTML =
+      '<div class="loading"><div class="spinner"></div>Cargando datos...</div>';
   }
+
   try {
-    const res = await fetch(APPS_SCRIPT_URL + '?key=fertrac2024');
+    const res = await fetch(APPS_SCRIPT_URL + '?key=' + ACCESS_KEY);
     const json = await res.json();
     if (json.error) throw new Error(json.error);
+
     allData = json.data.slice(1).map(row =>
       row.map(cell => cell === null || cell === undefined ? '' : String(cell).trim())
     );
+
     saveData(allData);
     const ts = localStorage.getItem('fertrac_updated');
     status.textContent = '✅ Sincronizado: ' + ts + ' | ' + allData.length + ' productos';
     btn.textContent = '🔄 Sincronizar';
     btn.disabled = false;
-    buildFilters(); applyFilters();
+    buildFilters();
+    applyFilters();
   } catch(e) {
-    status.textContent = '⚠️ Sin conexión — usando datos guardados';
+    status.textContent = '⚠️ Error al sincronizar';
     btn.textContent = '🔄 Sincronizar';
     btn.disabled = false;
     const saved = loadData();
     if (saved && saved.length > 0) { allData = saved; buildFilters(); applyFilters(); }
-    else wrapper.innerHTML = '<div class="empty-state">Sin datos guardados. Conéctate a internet para sincronizar por primera vez.</div>';
+    else document.getElementById('table-wrapper').innerHTML =
+      '<div class="empty-state">No hay datos guardados. Conéctate a internet para sincronizar.</div>';
   }
 }
 
+// ── FILTERS ────────────────────────────────────────────────────────────────
 function buildFilters() {
   const fields = [
     { id: 'f-categoria', col: C.CATEGORIA, label: 'Categoría' },
@@ -455,17 +475,17 @@ function applyFilters() {
 
 function clearAll() {
   document.getElementById('search-input').value = '';
-  ['f-categoria','f-subcategoria','f-tipo','f-linea','f-marca','f-aplicacion'].forEach(id => {
-    document.getElementById(id).value = '';
-  });
+  ['f-categoria','f-subcategoria','f-tipo','f-linea','f-marca','f-aplicacion']
+    .forEach(id => { document.getElementById(id).value = ''; });
   closeDetail();
   applyFilters();
 }
 
+// ── TABLE ──────────────────────────────────────────────────────────────────
 function renderTable() {
   const wrapper = document.getElementById('table-wrapper');
   if (filtered.length === 0) {
-    wrapper.innerHTML = '<div class="empty-state">No se encontraron productos con esos criterios</div>';
+    wrapper.innerHTML = '<div class="empty-state">No se encontraron productos</div>';
     return;
   }
   const show = filtered.slice(0, 200);
@@ -481,10 +501,12 @@ function renderTable() {
   wrapper.innerHTML =
     '<table><thead><tr><th>Referencia</th><th>Marca</th><th>Producto</th><th>Precio Bruto</th></tr></thead>' +
     '<tbody>' + rows + '</tbody></table>' +
-    (filtered.length > 200 ? '<div style="text-align:center;padding:10px;font-size:0.8rem;color:#888">Mostrando los primeros 200 resultados. Refina tu búsqueda para ver más.</div>' : '');
+    (filtered.length > 200 ? '<div style="text-align:center;padding:10px;font-size:0.8rem;color:#888">Mostrando 200 de ' + filtered.length + ' resultados. Refina tu búsqueda.</div>' : '');
 }
 
-function convertDriveUrl(url) {
+// ── DETAIL ─────────────────────────────────────────────────────────────────
+function extractDriveId(url) {
+  if (!url) return null;
   const match = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
   if (match) return match[1];
   const match2 = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
@@ -492,13 +514,11 @@ function convertDriveUrl(url) {
   return null;
 }
 
-async function loadImage(url, imgElement) {
-  const fileId = convertDriveUrl(url);
-  if (!fileId) return;
+async function loadImage(fileId, imgElement) {
   try {
-    const res = await fetch(APPS_SCRIPT_URL + '?key=fertrac2024&img=' + fileId);
+    const res = await fetch(APPS_SCRIPT_URL + '?key=' + ACCESS_KEY + '&img=' + fileId);
     const dataUrl = await res.text();
-    imgElement.src = dataUrl;
+    if (dataUrl.startsWith('data:')) imgElement.src = dataUrl;
   } catch(e) {
     imgElement.style.display = 'none';
   }
@@ -507,6 +527,7 @@ async function loadImage(url, imgElement) {
 function showDetail(idx) {
   const r = allData[idx];
   if (!r) return;
+
   document.querySelectorAll('tbody tr').forEach(tr => tr.classList.remove('selected'));
   const tr = document.querySelector('tr[data-idx="' + idx + '"]');
   if (tr) tr.classList.add('selected');
@@ -514,10 +535,10 @@ function showDetail(idx) {
   const inv = parseFloat(r[C.INV]) || 0;
   const invClass = inv > 10 ? 'inv-ok' : inv > 0 ? 'inv-low' : 'inv-none';
   const invText = inv > 10 ? inv + ' unidades' : inv > 0 ? inv + ' unidades (bajo)' : 'Sin stock';
-  const rawUrl = r[C.FOTO];
-  const imgUrl = rawUrl ? convertDriveUrl(rawUrl) : '';
-  const imgHtml = imgUrl
-    ? '<img src="' + imgUrl + '" class="product-image" alt="Foto" onerror="this.style.display=\'none\'">'
+
+  const fileId = extractDriveId(r[C.FOTO]);
+  const imgHtml = fileId
+    ? '<img id="detail-img" class="product-image" alt="Foto producto">'
     : '<div class="no-image">Sin imagen</div>';
 
   document.getElementById('detail-title').textContent = r[C.REF] || 'Detalle';
@@ -527,33 +548,33 @@ function showDetail(idx) {
         imgHtml +
         '<div class="detail-section">' +
           '<h3>🛠 Información técnica</h3>' +
-          row('Referencia', r[C.REF]) +
-          row('Producto', r[C.PRODUCTO]) +
-          row('Marca', r[C.MARCA]) +
-          row('Línea', r[C.LINEA]) +
-          row('Aplicación', r[C.APLICACION]) +
-          row('Refs. alternas / intercambio', r[C.ALTERNOS]) +
+          drow('Referencia', r[C.REF]) +
+          drow('Producto', r[C.PRODUCTO]) +
+          drow('Marca', r[C.MARCA]) +
+          drow('Línea', r[C.LINEA]) +
+          drow('Aplicación', r[C.APLICACION]) +
+          drow('Refs. alternas / intercambio', r[C.ALTERNOS]) +
         '</div>' +
       '</div>' +
       '<div>' +
         '<div class="detail-section">' +
           '<h3>💰 Precios</h3>' +
           '<div class="price-cards">' +
-            priceCard('Precio Bruto', r[C.PRECIO_BRUTO], false) +
-            priceCard('Neto -5%', r[C.NETO_5], false) +
-            priceCard('Neto -8%', r[C.NETO_8], false) +
-            (r[C.PRECIO_PROMO] ? priceCard('🔥 Precio Promo', r[C.PRECIO_PROMO], true) : '') +
+            pcard('Precio Bruto', r[C.PRECIO_BRUTO], false) +
+            pcard('Neto -5%', r[C.NETO_5], false) +
+            pcard('Neto -8%', r[C.NETO_8], false) +
+            (r[C.PRECIO_PROMO] ? pcard('🔥 Precio Promo', r[C.PRECIO_PROMO], true) : '') +
           '</div>' +
         '</div>' +
         '<div class="detail-section" style="margin-top:16px">' +
           '<h3>📦 Información comercial</h3>' +
-          row('Condición', r[C.CONDICION]) +
+          drow('Condición', r[C.CONDICION]) +
           '<div class="detail-row"><label>Inventario</label><span class="inv-badge ' + invClass + '">' + invText + '</span></div>' +
-          row('Unid. mín. de venta', r[C.UND_MIN]) +
-          row('Unid. máx. de venta', r[C.UND_MAX]) +
-          row('Escala (≥ unidades)', r[C.UND_ESCALA]) +
-          row('Und. RM', r[C.UND_RM]) +
-          row('Und. RMC', r[C.UND_RMC]) +
+          drow('Unid. mín. de venta', r[C.UND_MIN]) +
+          drow('Unid. máx. de venta', r[C.UND_MAX]) +
+          drow('Escala (≥ unidades)', r[C.UND_ESCALA]) +
+          drow('Und. RM', r[C.UND_RM]) +
+          drow('Und. RMC', r[C.UND_RMC]) +
           (r[C.PROMO_FIN] ? '<div class="detail-row"><label>Promo finaliza en</label><span style="color:#e65100;font-weight:700">' + r[C.PROMO_FIN] + '</span></div>' : '') +
         '</div>' +
       '</div>' +
@@ -562,17 +583,12 @@ function showDetail(idx) {
   const panel = document.getElementById('detail-panel');
   panel.classList.add('visible');
   panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  if (hasImage && rawUrl) {
-    const imgEl = document.getElementById('detail-img');
-    if (imgEl) loadImage(rawUrl, imgEl);
-  }
-}
 
-function row(label, val) {
-  return '<div class="detail-row"><label>' + label + '</label><span>' + (val||'—') + '</span></div>';
-}
-function priceCard(label, val, isPromo) {
-  return '<div class="price-card' + (isPromo?' promo':'') + '"><label>' + label + '</label><div class="amount">' + formatPrice(val) + '</div></div>';
+  // Load image async if online
+  if (fileId && navigator.onLine) {
+    const imgEl = document.getElementById('detail-img');
+    if (imgEl) loadImage(fileId, imgEl);
+  }
 }
 
 function closeDetail() {
@@ -580,6 +596,12 @@ function closeDetail() {
   document.querySelectorAll('tbody tr').forEach(tr => tr.classList.remove('selected'));
 }
 
+function drow(label, val) {
+  return '<div class="detail-row"><label>' + label + '</label><span>' + (val||'—') + '</span></div>';
+}
+function pcard(label, val, isPromo) {
+  return '<div class="price-card' + (isPromo?' promo':'') + '"><label>' + label + '</label><div class="amount">' + formatPrice(val) + '</div></div>';
+}
 function formatPrice(val) {
   if (!val) return '—';
   const n = parseFloat(String(val).replace(/[^0-9.]/g, ''));
