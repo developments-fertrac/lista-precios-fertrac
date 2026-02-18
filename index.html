@@ -10,17 +10,17 @@
 <title>Lista de Precios - Fertrac</title>
 <style>
   :root {
-    --green: #1a5c2a;
-    --green-light: #2d8a45;
-    --green-pale: #e8f5ec;
-    --yellow: #f5c518;
+    --green: #F47920;
+    --green-light: #F69444;
+    --green-pale: #FEF0E6;
+    --yellow: #58595B;
     --border: #ddd;
     --text: #222;
     --subtext: #666;
     --shadow: 0 2px 8px rgba(0,0,0,0.1);
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Segoe UI', sans-serif; background: #f0f4f0; color: var(--text); }
+  body { font-family: 'Segoe UI', sans-serif; background: #f5f5f5; color: var(--text); }
   header {
     background: var(--green);
     color: white;
@@ -35,8 +35,8 @@
   }
   header h1 { font-size: 1.1rem; font-weight: 700; }
   #sync-btn {
-    background: var(--yellow);
-    color: #222;
+    background: white;
+    color: var(--green);
     border: none;
     border-radius: 20px;
     padding: 6px 14px;
@@ -252,7 +252,12 @@
 <body>
 
 <header>
-  <h1>🌱 Lista de Precios — Fertrac</h1>
+  <div style="display:flex;align-items:center;gap:12px">
+    <img src="https://raw.githubusercontent.com/developments-fertrac/lista-precios-fertrac/main/logo.png"
+         alt="Fertrac" style="height:38px;object-fit:contain"
+         onerror="this.outerHTML='<span style='font-size:1.1rem;font-weight:700;color:white'>Fertrac</span>'">
+    <span style="font-size:1rem;font-weight:600;color:white;opacity:0.9">Lista de Precios</span>
+  </div>
   <button id="sync-btn" onclick="syncData()">🔄 Sincronizar</button>
 </header>
 
