@@ -608,11 +608,10 @@ function renderTable() {
       '<td><strong>' + (r[C.REF]||'—') + '</strong></td>' +
       '<td><span class="tag">' + (r[C.MARCA]||'—') + '</span></td>' +
       '<td>' + (r[C.PRODUCTO]||'—') + '</td>' +
-      '<td>' + formatPrice(r[C.PRECIO_BRUTO]) + '</td>' +
       '</tr>';
   }).join('');
   wrapper.innerHTML =
-    '<table><thead><tr><th>Referencia</th><th>Marca</th><th>Producto</th><th>Precio Bruto</th></tr></thead>' +
+    '<table><thead><tr><th>Referencia</th><th>Marca</th><th>Producto</th></tr></thead>' +
     '<tbody>' + rows + '</tbody></table>' +
     (filtered.length > 200 ? '<div style="text-align:center;padding:10px;font-size:0.8rem;color:#888">Mostrando 200 de ' + filtered.length + ' resultados. Refina tu búsqueda.</div>' : '');
 }
@@ -651,7 +650,7 @@ function showDetail(idx) {
 
   const fileId = extractDriveId(r[C.FOTO]);
   const imgHtml = fileId
-    ? '<img id="detail-img" class="product-image" alt="Foto producto">'
+    ? '<img id="detail-img" class="product-image" alt="Foto producto" onclick="openModal(this)" style="cursor:zoom-in">'
     : '<div class="no-image">Sin imagen</div>';
 
   document.getElementById('detail-title').textContent = r[C.REF] || 'Detalle';
@@ -715,6 +714,17 @@ function drow(label, val) {
 function pcard(label, val, isPromo) {
   return '<div class="price-card' + (isPromo?' promo':'') + '"><label>' + label + '</label><div class="amount">' + formatPrice(val) + '</div></div>';
 }
+function openModal(imgEl) {
+  const modal = document.getElementById('img-modal');
+  document.getElementById('img-modal-src').src = imgEl.src;
+  modal.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+}
+function closeModal() {
+  document.getElementById('img-modal').style.display = 'none';
+  document.body.style.overflow = '';
+}
+
 function formatPrice(val) {
   if (!val) return '—';
   const n = parseFloat(String(val).replace(/[^0-9.]/g, ''));
@@ -734,5 +744,13 @@ window.addEventListener('scroll', () => {
 });
 </script>
 </div><!-- end app-content -->
+
+<!-- IMAGE MODAL -->
+<div id="img-modal" onclick="closeModal()" style="
+  display:none;position:fixed;inset:0;z-index:999;
+  background:rgba(0,0,0,0.85);
+  align-items:center;justify-content:center;padding:20px;">
+  <img id="img-modal-src" style="max-width:100%;max-height:90vh;border-radius:10px;object-fit:contain;">
+</div>
 </body>
 </html>
