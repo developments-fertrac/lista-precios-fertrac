@@ -22,29 +22,57 @@
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: 'Segoe UI', sans-serif; background: #f5f5f5; color: var(--text); }
   header {
-    background: var(--green);
-    color: white;
-    padding: 14px 20px;
+    background: white;
+    padding: 10px 20px;
     display: flex;
     align-items: center;
     justify-content: space-between;
     position: sticky;
     top: 0;
     z-index: 100;
-    box-shadow: var(--shadow);
+    border-bottom: 3px solid var(--green);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
   }
-  header h1 { font-size: 1.1rem; font-weight: 700; }
-  #sync-btn {
-    background: white;
+  .header-title {
+    font-size: 0.95rem;
+    font-weight: 700;
     color: var(--green);
+    letter-spacing: 0.3px;
+  }
+  #sync-btn {
+    background: var(--green);
+    color: white;
     border: none;
-    border-radius: 20px;
-    padding: 6px 14px;
+    border-radius: 8px;
+    padding: 7px 16px;
     font-size: 0.8rem;
     font-weight: 700;
     cursor: pointer;
+    transition: background 0.2s;
   }
+  #sync-btn:hover { background: var(--green-light); }
   #sync-btn:disabled { opacity: 0.6; }
+
+  /* GO TOP BUTTON */
+  #go-top-btn {
+    display: none;
+    position: fixed;
+    bottom: 24px;
+    right: 20px;
+    background: var(--green);
+    color: white;
+    border: none;
+    border-radius: 24px;
+    padding: 10px 18px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(244,121,32,0.4);
+    z-index: 50;
+    transition: all 0.2s;
+  }
+  #go-top-btn.visible { display: flex; align-items: center; gap: 6px; }
+  #go-top-btn:hover { background: var(--green-light); transform: translateY(-2px); }
   main { max-width: 900px; margin: 0 auto; padding: 16px; }
   .instructions {
     background: white;
@@ -252,21 +280,26 @@
 <body>
 
 <header>
-  <div style="display:flex;align-items:center;gap:12px">
+  <div style="display:flex;align-items:center;gap:14px">
     <img src="https://raw.githubusercontent.com/developments-fertrac/lista-precios-fertrac/main/logo.png"
-         alt="Fertrac" style="height:38px;object-fit:contain"
-         onerror="this.outerHTML='<span style='font-size:1.1rem;font-weight:700;color:white'>Fertrac</span>'">
-    <span style="font-size:1rem;font-weight:600;color:white;opacity:0.9">Lista de Precios</span>
+         alt="Fertrac" style="height:40px;object-fit:contain"
+         onerror="this.style.display='none'">
+    <span class="header-title">Lista de Precios</span>
   </div>
-  <button id="sync-btn" onclick="syncData()">🔄 Sincronizar</button>
+  <div style="display:flex;align-items:center;gap:10px">
+    <span id="sync-status" style="font-size:0.72rem;color:#aaa"></span>
+    <button id="sync-btn" onclick="syncData()">🔄 Sincronizar</button>
+  </div>
 </header>
+
+<!-- GO TOP BUTTON -->
+<button id="go-top-btn" onclick="goTop()">↑ Ir arriba</button>
 
 <div class="offline-banner" id="offline-banner">
   📵 Sin conexión — mostrando datos guardados
 </div>
 
 <main>
-  <div id="sync-status"></div>
 
   <div class="instructions">
     <strong>📋 Cómo usar:</strong>
@@ -396,7 +429,7 @@ async function syncData() {
 
     saveData(allData);
     const ts = localStorage.getItem('fertrac_updated');
-    status.textContent = '✅ Sincronizado: ' + ts + ' | ' + allData.length + ' productos';
+    status.textContent = '✅ ' + allData.length + ' productos';
     btn.textContent = '🔄 Sincronizar';
     btn.disabled = false;
     buildFilters();
@@ -592,6 +625,17 @@ function formatPrice(val) {
   if (isNaN(n)) return val;
   return '$' + n.toLocaleString('es-CO', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 }
+
+function goTop() {
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// Show/hide go-top button based on scroll
+window.addEventListener('scroll', () => {
+  const btn = document.getElementById('go-top-btn');
+  if (window.scrollY > 300) btn.classList.add('visible');
+  else btn.classList.remove('visible');
+});
 </script>
 </body>
 </html>
