@@ -387,7 +387,7 @@ async function syncData() {
     wrapper.innerHTML = '<div class="loading"><div class="spinner"></div>Cargando datos...</div>';
   }
   try {
-    const res = await fetch(APPS_SCRIPT_URL);
+    const res = await fetch(APPS_SCRIPT_URL + '?key=fertrac2024');
     const json = await res.json();
     if (json.error) throw new Error(json.error);
     allData = json.data.slice(1).map(row =>
