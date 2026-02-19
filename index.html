@@ -272,6 +272,16 @@
   }
   @keyframes spin { to { transform: rotate(360deg); } }
   .empty-state { text-align: center; padding: 40px; color: var(--subtext); font-size: 0.9rem; }
+
+  /* MOBILE TABLE */
+  @media (max-width: 600px) {
+    thead { display: none; }
+    tbody tr { display: block; padding: 10px 14px; border-bottom: 1px solid var(--border); }
+    tbody td { display: inline; padding: 0; border: none; font-size: 0.83rem; }
+    tbody td.td-ref { display: block; font-weight: 700; font-size: 0.9rem; margin-bottom: 4px; }
+    tbody td.td-marca { display: inline; margin-right: 6px; }
+    tbody td.td-producto { display: block; color: var(--subtext); font-size: 0.8rem; margin-top: 3px; }
+  }
   .offline-banner {
     background: #fff3cd;
     color: #856404;
@@ -611,9 +621,9 @@ function renderTable() {
   const rows = show.map(r => {
     const idx = allData.indexOf(r);
     return '<tr onclick="showDetail(' + idx + ')" data-idx="' + idx + '">' +
-      '<td><strong>' + (r[C.REF]||'—') + '</strong></td>' +
-      '<td><span class="tag">' + (r[C.MARCA]||'—') + '</span></td>' +
-      '<td>' + (r[C.PRODUCTO]||'—') + '</td>' +
+      '<td class="td-ref">' + (r[C.REF]||'—') + '</td>' +
+      '<td class="td-marca"><span class="tag">' + (r[C.MARCA]||'—') + '</span></td>' +
+      '<td class="td-producto">' + (r[C.PRODUCTO]||'—') + '</td>' +
       '</tr>';
   }).join('');
   wrapper.innerHTML =
