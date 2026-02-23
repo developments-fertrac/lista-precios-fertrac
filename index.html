@@ -666,27 +666,62 @@ function buildFilters() {
     const grid = document.getElementById('filters-grid');
     if (!grid) return;
     grid.innerHTML = '';
-    FILTER_FIELDS.forEach(f => {
+    FILTER_FIELDS.forEach(function(f) {
       const wrap = document.createElement('div');
       wrap.className = 'ms-wrap';
       wrap.id = 'wrap-' + f.id;
-      wrap.innerHTML =
-        '<button class="ms-btn" id="btn-' + f.id + '" onclick="msToggle('' + f.id + '')">' +
-          '<span class="ms-label" id="lbl-' + f.id + '">' + f.label + '</span>' +
-          '<span class="ms-arrow">▼</span>' +
-        '</button>' +
-        '<div class="ms-dropdown" id="dd-' + f.id + '">' +
-          '<input class="ms-search" type="text" placeholder="🔍 Buscar..." oninput="msSearch('' + f.id + '', this.value)">' +
-          '<div class="ms-options" id="opts-' + f.id + '"></div>' +
-          '<div class="ms-footer">' +
-            '<button class="ms-clear" onclick="msClear('' + f.id + '')">✕ Limpiar</button>' +
-            '<button class="ms-ok" onclick="msClose('' + f.id + '')">OK</button>' +
-          '</div>' +
-        '</div>';
+
+      const btn = document.createElement('button');
+      btn.className = 'ms-btn';
+      btn.id = 'btn-' + f.id;
+      btn.onclick = (function(id){ return function(){ msToggle(id); }; })(f.id);
+      const lbl = document.createElement('span');
+      lbl.className = 'ms-label';
+      lbl.id = 'lbl-' + f.id;
+      lbl.textContent = f.label;
+      const arrow = document.createElement('span');
+      arrow.className = 'ms-arrow';
+      arrow.textContent = '▼';
+      btn.appendChild(lbl);
+      btn.appendChild(arrow);
+
+      const dd = document.createElement('div');
+      dd.className = 'ms-dropdown';
+      dd.id = 'dd-' + f.id;
+
+      const srch = document.createElement('input');
+      srch.className = 'ms-search';
+      srch.type = 'text';
+      srch.placeholder = '🔍 Buscar...';
+      srch.oninput = (function(id){ return function(){ msSearch(id, this.value); }; })(f.id);
+
+      const opts = document.createElement('div');
+      opts.className = 'ms-options';
+      opts.id = 'opts-' + f.id;
+
+      const footer = document.createElement('div');
+      footer.className = 'ms-footer';
+      const clearBtn = document.createElement('button');
+      clearBtn.className = 'ms-clear';
+      clearBtn.textContent = '✕ Limpiar';
+      clearBtn.onclick = (function(id){ return function(){ msClear(id); }; })(f.id);
+      const okBtn = document.createElement('button');
+      okBtn.className = 'ms-ok';
+      okBtn.textContent = 'OK';
+      okBtn.onclick = (function(id){ return function(){ msClose(id); }; })(f.id);
+      footer.appendChild(clearBtn);
+      footer.appendChild(okBtn);
+
+      dd.appendChild(srch);
+      dd.appendChild(opts);
+      dd.appendChild(footer);
+      wrap.appendChild(btn);
+      wrap.appendChild(dd);
       grid.appendChild(wrap);
     });
+
     document.addEventListener('click', function(e) {
-      FILTER_FIELDS.forEach(f => {
+      FILTER_FIELDS.forEach(function(f) {
         const wrap = document.getElementById('wrap-' + f.id);
         if (wrap && !wrap.contains(e.target)) {
           const dd = document.getElementById('dd-' + f.id);
@@ -719,16 +754,27 @@ function msRefresh() {
 function msRenderOpts(fid, vals, search) {
   const c = document.getElementById('opts-' + fid);
   if (!c) return;
-  const shown = search ? vals.filter(v => v.toLowerCase().includes(search.toLowerCase())) : vals;
-  if (!shown.length) { c.innerHTML = '<div class="ms-empty">Sin resultados</div>'; return; }
-  c.innerHTML = shown.map(v => {
+  const shown = search ? vals.filter(function(v){ return v.toLowerCase().includes(search.toLowerCase()); }) : vals;
+  c.innerHTML = '';
+  if (!shown.length) {
+    const empty = document.createElement('div');
+    empty.className = 'ms-empty';
+    empty.textContent = 'Sin resultados';
+    c.appendChild(empty);
+    return;
+  }
+  shown.forEach(function(v) {
     const chk = SEL[fid].has(v);
-    const safe = v.replace(/'/g, "\'");
-    return '<label class="ms-option' + (chk ? ' checked' : '') + '">' +
-      '<input type="checkbox"' + (chk ? ' checked' : '') +
-      ' onchange="msToggleOpt('' + fid + '','' + safe + '',this.checked)">' +
-      v + '</label>';
-  }).join('');
+    const lbl = document.createElement('label');
+    lbl.className = 'ms-option' + (chk ? ' checked' : '');
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.checked = chk;
+    cb.onchange = (function(id, val){ return function(){ msToggleOpt(id, val, this.checked); }; })(fid, v);
+    lbl.appendChild(cb);
+    lbl.appendChild(document.createTextNode(v));
+    c.appendChild(lbl);
+  });
 }
 
 function msSearch(fid, search) {
