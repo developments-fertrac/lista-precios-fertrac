@@ -341,6 +341,34 @@
     margin-top: 16px;
   }
   #app-content { display: none; }
+
+  /* iOS INSTALL BANNER */
+  #ios-install-banner {
+    display: none;
+    background: white;
+    border-top: 3px solid var(--green);
+    padding: 12px 16px;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 200;
+    box-shadow: 0 -4px 16px rgba(0,0,0,0.12);
+    align-items: center;
+    gap: 12px;
+  }
+  #ios-install-banner.visible { display: flex; }
+  .ios-banner-text { flex: 1; font-size: 0.82rem; color: var(--text); line-height: 1.4; }
+  .ios-banner-text strong { color: var(--green); display: block; margin-bottom: 2px; }
+  #ios-banner-close {
+    background: none;
+    border: none;
+    font-size: 1.2rem;
+    color: #aaa;
+    cursor: pointer;
+    padding: 4px;
+    flex-shrink: 0;
+  }
 </style>
 </head>
 <body>
@@ -488,6 +516,7 @@ function showApp() {
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('app-content').style.display = 'block';
   initApp();
+  checkIosInstallBanner();
 }
 
 function checkAuth() {
@@ -833,6 +862,20 @@ function goTop() {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
+function checkIosInstallBanner() {
+  const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  const isInStandaloneMode = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+  const dismissed = localStorage.getItem('ios_banner_dismissed');
+  if (isIos && !isInStandaloneMode && !dismissed) {
+    document.getElementById('ios-install-banner').classList.add('visible');
+  }
+}
+
+function dismissIosBanner() {
+  document.getElementById('ios-install-banner').classList.remove('visible');
+  localStorage.setItem('ios_banner_dismissed', '1');
+}
+
 // Show/hide go-top button based on scroll
 window.addEventListener('scroll', () => {
   const btn = document.getElementById('go-top-btn');
@@ -840,6 +883,15 @@ window.addEventListener('scroll', () => {
   else btn.classList.remove('visible');
 });
 </script>
+<!-- iOS INSTALL BANNER -->
+<div id="ios-install-banner">
+  <span style="font-size:1.6rem">📲</span>
+  <div class="ios-banner-text">
+    <strong>Instala la app en tu iPhone</strong>
+    Toca <strong>⎙</strong> (compartir) y luego <strong>"Añadir a pantalla de inicio"</strong>
+  </div>
+  <button id="ios-banner-close" onclick="dismissIosBanner()">✕</button>
+</div>
 </div><!-- end app-content -->
 
 <!-- IMAGE MODAL -->
