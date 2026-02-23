@@ -219,8 +219,13 @@
   }
   .price-card label { font-size: 0.72rem; color: var(--subtext); display: block; margin-bottom: 4px; }
   .price-card .amount { font-size: 1.05rem; font-weight: 700; color: var(--green); }
-  .price-card.promo { background: #fff8e1; }
-  .price-card.promo .amount { color: #e65100; }
+# precio promo
+  .price-card.promo { background: #e6d7cf; }
+  .price-card.promo .amount { color: #ef5f06; }
+  .price-card.neto5 { background: #FCE4EC; }
+  .price-card.neto5 .amount { color: #C2185B; }
+  .price-card.neto8 { background: #F8BBD0; }
+  .price-card.neto8 .amount { color: #AD1457; }
   .info-cards {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
@@ -234,8 +239,9 @@
   }
   .info-card label { font-size: 0.72rem; color: var(--subtext); display: block; margin-bottom: 6px; }
   .info-card .value { font-size: 0.95rem; font-weight: 700; }
-  .info-card.condicion { background: var(--green-pale); }
-  .info-card.condicion .value { color: var(--green); }
+  .info-card.condicion { background: #9bc0d9; }
+# precio condicion
+  .info-card.condicion .value { color: #455A64; }
   .product-image {
     width: 100%;
     max-width: 200px;
@@ -341,6 +347,34 @@
     margin-top: 16px;
   }
   #app-content { display: none; }
+
+  /* iOS INSTALL BANNER */
+  #ios-install-banner {
+    display: none;
+    background: white;
+    border-top: 3px solid var(--green);
+    padding: 12px 16px;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 200;
+    box-shadow: 0 -4px 16px rgba(0,0,0,0.12);
+    align-items: center;
+    gap: 12px;
+  }
+  #ios-install-banner.visible { display: flex; }
+  .ios-banner-text { flex: 1; font-size: 0.82rem; color: var(--text); line-height: 1.4; }
+  .ios-banner-text strong { color: var(--green); display: block; margin-bottom: 2px; }
+  #ios-banner-close {
+    background: none;
+    border: none;
+    font-size: 1.2rem;
+    color: #aaa;
+    cursor: pointer;
+    padding: 4px;
+    flex-shrink: 0;
+  }
 </style>
 </head>
 <body>
@@ -488,6 +522,7 @@ function showApp() {
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('app-content').style.display = 'block';
   initApp();
+  checkIosInstallBanner();
 }
 
 function checkAuth() {
@@ -767,10 +802,10 @@ function showDetail(idx) {
         '<div class="detail-section">' +
           '<h3>💰 Precios</h3>' +
           '<div class="price-cards">' +
-            pcard('Precio Bruto', r[C.PRECIO_BRUTO], false) +
-            pcard('Neto -5%', r[C.NETO_5], false) +
-            pcard('Neto -8%', r[C.NETO_8], false) +
-            (r[C.PRECIO_PROMO] ? pcard('🔥 Precio Promo', r[C.PRECIO_PROMO], true) : '') +
+            pcard('Precio Bruto', r[C.PRECIO_BRUTO], '') +
+            pcardClass('Neto -5%', r[C.NETO_5], 'neto5') +
+            (r[C.PRECIO_PROMO] ? pcard('🔥 Precio Promo', r[C.PRECIO_PROMO], true) : pcardClass('Neto -8%', r[C.NETO_8], 'neto8')) +
+            (r[C.PRECIO_PROMO] ? pcardClass('Neto -8%', r[C.NETO_8], 'neto8') : '') +
           '</div>' +
         '</div>' +
         '<div class="detail-section" style="margin-top:16px">' +
@@ -811,6 +846,9 @@ function drow(label, val) {
 function pcard(label, val, isPromo) {
   return '<div class="price-card' + (isPromo?' promo':'') + '"><label>' + label + '</label><div class="amount">' + formatPrice(val) + '</div></div>';
 }
+function pcardClass(label, val, cls) {
+  return '<div class="price-card ' + cls + '"><label>' + label + '</label><div class="amount">' + formatPrice(val) + '</div></div>';
+}
 function openModal(imgEl) {
   const modal = document.getElementById('img-modal');
   document.getElementById('img-modal-src').src = imgEl.src;
@@ -833,6 +871,20 @@ function goTop() {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
+function checkIosInstallBanner() {
+  const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  const isInStandaloneMode = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+  const dismissed = localStorage.getItem('ios_banner_dismissed');
+  if (isIos && !isInStandaloneMode && !dismissed) {
+    document.getElementById('ios-install-banner').classList.add('visible');
+  }
+}
+
+function dismissIosBanner() {
+  document.getElementById('ios-install-banner').classList.remove('visible');
+  localStorage.setItem('ios_banner_dismissed', '1');
+}
+
 // Show/hide go-top button based on scroll
 window.addEventListener('scroll', () => {
   const btn = document.getElementById('go-top-btn');
@@ -840,6 +892,15 @@ window.addEventListener('scroll', () => {
   else btn.classList.remove('visible');
 });
 </script>
+<!-- iOS INSTALL BANNER -->
+<div id="ios-install-banner">
+  <span style="font-size:1.6rem">📲</span>
+  <div class="ios-banner-text">
+    <strong>Instala la app en tu iPhone</strong>
+    Toca <strong>⎙</strong> (compartir) y luego <strong>"Añadir a pantalla de inicio"</strong>
+  </div>
+  <button id="ios-banner-close" onclick="dismissIosBanner()">✕</button>
+</div>
 </div><!-- end app-content -->
 
 <!-- IMAGE MODAL -->
