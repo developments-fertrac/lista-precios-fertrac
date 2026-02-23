@@ -1,0 +1,23 @@
+{
+  "name": "Lista de Precios Fertrac",
+  "short_name": "Lista Fertrac",
+  "description": "Catálogo de productos Fertrac para asesores comerciales",
+  "start_url": "/lista-precios-fertrac/",
+  "scope": "/lista-precios-fertrac/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f5f5f5",
+  "theme_color": "#F47920",
+  "icons": [
+    {
+      "src": "https://raw.githubusercontent.com/developments-fertrac/lista-precios-fertrac/main/logo.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://raw.githubusercontent.com/developments-fertrac/lista-precios-fertrac/main/logo.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
