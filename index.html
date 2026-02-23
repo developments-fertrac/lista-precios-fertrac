@@ -786,30 +786,6 @@ function msClear(fid) {
   applyFilters();
 }
 
-function updateDependentFilters() {
-  // After a filter change, recompute options for all OTHER filters
-  // based on what the current active filters allow
-  const q = document.getElementById('search-input').value.toLowerCase();
-  const currentVals = {};
-  FILTER_FIELDS.forEach(f => { currentVals[f.id] = document.getElementById(f.id).value; });
-
-  FILTER_FIELDS.forEach(targetField => {
-    // Get a subset that matches all filters EXCEPT the target field itself
-    const subset = allData.filter(r => {
-      if (q && !(r[C.REF]+' '+r[C.PRODUCTO]+' '+r[C.MARCA]+' '+r[C.ALTERNOS]).toLowerCase().includes(q)) return false;
-      for (const f of FILTER_FIELDS) {
-        if (f.id === targetField.id) continue; // skip self
-        if (currentVals[f.id] && r[f.col] !== currentVals[f.id]) return false;
-      }
-      return true;
-    });
-    const vals = [...new Set(subset.map(r => r[targetField.col]).filter(Boolean))].sort();
-    const sel = document.getElementById(targetField.id);
-    const current = currentVals[targetField.id];
-    sel.innerHTML = '<option value="">' + targetField.label + '</option>' +
-      vals.map(v => '<option value="' + v + '"' + (v === current ? ' selected' : '') + '>' + v + '</option>').join('');
-  });
-}
 
 function applyFilters() {
   const q = document.getElementById('search-input').value.toLowerCase();
