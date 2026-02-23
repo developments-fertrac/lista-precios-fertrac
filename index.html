@@ -123,15 +123,25 @@
     grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
     gap: 8px;
   }
-  .filters-grid select {
-    width: 100%;
-    padding: 8px 10px;
-    border: 1.5px solid var(--border);
-    border-radius: 8px;
-    font-size: 0.82rem;
-    background: white;
-    outline: none;
-  }
+  .ms-wrap { position: relative; }
+  .ms-btn { width:100%; padding:8px 10px; border:1.5px solid var(--border); border-radius:8px; font-size:0.82rem; background:white; text-align:left; cursor:pointer; display:flex; align-items:center; justify-content:space-between; gap:4px; color:var(--text); white-space:nowrap; overflow:hidden; }
+  .ms-btn.active { border-color:var(--green); background:var(--green-pale); color:var(--green); font-weight:600; }
+  .ms-btn .ms-label { overflow:hidden; text-overflow:ellipsis; flex:1; }
+  .ms-btn .ms-arrow { font-size:0.65rem; flex-shrink:0; }
+  .ms-dropdown { display:none; position:absolute; top:calc(100% + 4px); left:0; min-width:220px; background:white; border:1.5px solid var(--border); border-radius:10px; box-shadow:0 8px 24px rgba(0,0,0,0.12); z-index:300; overflow:hidden; }
+  .ms-dropdown.open { display:block; }
+  .ms-search { width:100%; padding:8px 12px; border:none; border-bottom:1px solid var(--border); font-size:0.82rem; outline:none; background:#fafafa; }
+  .ms-options { max-height:200px; overflow-y:auto; }
+  .ms-option { display:flex; align-items:center; gap:8px; padding:8px 12px; font-size:0.82rem; cursor:pointer; color:var(--text); }
+  .ms-option:hover { background:var(--green-pale); }
+  .ms-option input[type=checkbox] { accent-color:var(--green); width:14px; height:14px; flex-shrink:0; }
+  .ms-option.checked { background:var(--green-pale); color:var(--green); font-weight:600; }
+  .ms-empty { padding:10px 12px; font-size:0.8rem; color:var(--subtext); text-align:center; }
+  .ms-footer { padding:8px 12px; border-top:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; background:#fafafa; }
+  .ms-clear { font-size:0.75rem; color:var(--subtext); cursor:pointer; background:none; border:none; padding:0; }
+  .ms-clear:hover { color:var(--green); }
+  .ms-ok { background:var(--green); color:white; border:none; border-radius:6px; padding:5px 14px; font-size:0.8rem; font-weight:700; cursor:pointer; }
+  .ms-ok:hover { background:var(--green-light); }
   .results-meta { font-size: 0.85rem; color: var(--subtext); margin-bottom: 10px; }
   .results-meta strong { color: var(--green); }
   .table-wrapper {
@@ -449,14 +459,7 @@
       <input type="text" id="search-input" placeholder="🔍 Buscar por referencia, producto, marca..." oninput="applyFilters()">
       <button id="clear-btn" onclick="clearAll()">🧹 Limpiar</button>
     </div>
-    <div class="filters-grid">
-      <select id="f-categoria" onchange="applyFilters()"><option value="">Categoría</option></select>
-      <select id="f-subcategoria" onchange="applyFilters()"><option value="">Subcategoría</option></select>
-      <select id="f-tipo" onchange="applyFilters()"><option value="">Tipo de producto</option></select>
-      <select id="f-linea" onchange="applyFilters()"><option value="">Línea</option></select>
-      <select id="f-marca" onchange="applyFilters()"><option value="">Marca</option></select>
-      <select id="f-aplicacion" onchange="applyFilters()"><option value="">Aplicación</option></select>
-    </div>
+    <div class="filters-grid" id="filters-grid"></div>
   </div>
 
   <div class="results-meta" id="results-meta"></div>
@@ -653,14 +656,134 @@ const FILTER_FIELDS = [
   { id: 'f-aplicacion',   col: C.APLICACION,   label: 'Aplicación' },
 ];
 
+const SEL = {};  // selected values per filter: Set
+FILTER_FIELDS.forEach(f => { SEL[f.id] = new Set(); });
+let builtOnce = false;
+
 function buildFilters() {
-  // On initial load, populate all filters from full dataset
-  FILTER_FIELDS.forEach(f => {
-    const sel = document.getElementById(f.id);
-    const vals = [...new Set(allData.map(r => r[f.col]).filter(Boolean))].sort();
-    sel.innerHTML = '<option value="">' + f.label + '</option>' +
-      vals.map(v => '<option value="' + v + '">' + v + '</option>').join('');
+  if (!builtOnce) {
+    builtOnce = true;
+    const grid = document.getElementById('filters-grid');
+    if (!grid) return;
+    grid.innerHTML = '';
+    FILTER_FIELDS.forEach(f => {
+      const wrap = document.createElement('div');
+      wrap.className = 'ms-wrap';
+      wrap.id = 'wrap-' + f.id;
+      wrap.innerHTML =
+        '<button class="ms-btn" id="btn-' + f.id + '" onclick="msToggle('' + f.id + '')">' +
+          '<span class="ms-label" id="lbl-' + f.id + '">' + f.label + '</span>' +
+          '<span class="ms-arrow">▼</span>' +
+        '</button>' +
+        '<div class="ms-dropdown" id="dd-' + f.id + '">' +
+          '<input class="ms-search" type="text" placeholder="🔍 Buscar..." oninput="msSearch('' + f.id + '', this.value)">' +
+          '<div class="ms-options" id="opts-' + f.id + '"></div>' +
+          '<div class="ms-footer">' +
+            '<button class="ms-clear" onclick="msClear('' + f.id + '')">✕ Limpiar</button>' +
+            '<button class="ms-ok" onclick="msClose('' + f.id + '')">OK</button>' +
+          '</div>' +
+        '</div>';
+      grid.appendChild(wrap);
+    });
+    document.addEventListener('click', function(e) {
+      FILTER_FIELDS.forEach(f => {
+        const wrap = document.getElementById('wrap-' + f.id);
+        if (wrap && !wrap.contains(e.target)) {
+          const dd = document.getElementById('dd-' + f.id);
+          if (dd) dd.classList.remove('open');
+        }
+      });
+    });
+  }
+  msRefresh();
+}
+
+function msRefresh() {
+  if (allData.length === 0) return;
+  const q = document.getElementById('search-input').value.toLowerCase();
+  FILTER_FIELDS.forEach(target => {
+    const subset = allData.filter(r => {
+      if (q && !(r[C.REF]+' '+r[C.PRODUCTO]+' '+r[C.MARCA]+' '+r[C.ALTERNOS]).toLowerCase().includes(q)) return false;
+      for (const f of FILTER_FIELDS) {
+        if (f.id === target.id) continue;
+        if (SEL[f.id].size > 0 && !SEL[f.id].has(r[f.col])) return false;
+      }
+      return true;
+    });
+    const vals = [...new Set(subset.map(r => r[target.col]).filter(Boolean))].sort();
+    msRenderOpts(target.id, vals, '');
+    msUpdateLabel(target.id, target.label);
   });
+}
+
+function msRenderOpts(fid, vals, search) {
+  const c = document.getElementById('opts-' + fid);
+  if (!c) return;
+  const shown = search ? vals.filter(v => v.toLowerCase().includes(search.toLowerCase())) : vals;
+  if (!shown.length) { c.innerHTML = '<div class="ms-empty">Sin resultados</div>'; return; }
+  c.innerHTML = shown.map(v => {
+    const chk = SEL[fid].has(v);
+    const safe = v.replace(/'/g, "\'");
+    return '<label class="ms-option' + (chk ? ' checked' : '') + '">' +
+      '<input type="checkbox"' + (chk ? ' checked' : '') +
+      ' onchange="msToggleOpt('' + fid + '','' + safe + '',this.checked)">' +
+      v + '</label>';
+  }).join('');
+}
+
+function msSearch(fid, search) {
+  const field = FILTER_FIELDS.find(f => f.id === fid);
+  const q = document.getElementById('search-input').value.toLowerCase();
+  const subset = allData.filter(r => {
+    if (q && !(r[C.REF]+' '+r[C.PRODUCTO]+' '+r[C.MARCA]+' '+r[C.ALTERNOS]).toLowerCase().includes(q)) return false;
+    for (const f of FILTER_FIELDS) {
+      if (f.id === fid) continue;
+      if (SEL[f.id].size > 0 && !SEL[f.id].has(r[f.col])) return false;
+    }
+    return true;
+  });
+  const vals = [...new Set(subset.map(r => r[field.col]).filter(Boolean))].sort();
+  msRenderOpts(fid, vals, search);
+}
+
+function msToggleOpt(fid, val, checked) {
+  if (checked) SEL[fid].add(val); else SEL[fid].delete(val);
+  const field = FILTER_FIELDS.find(f => f.id === fid);
+  msUpdateLabel(fid, field.label);
+  applyFilters();
+}
+
+function msUpdateLabel(fid, defaultLabel) {
+  const btn = document.getElementById('btn-' + fid);
+  const lbl = document.getElementById('lbl-' + fid);
+  if (!btn || !lbl) return;
+  const n = SEL[fid].size;
+  lbl.textContent = n > 0 ? defaultLabel + ' (' + n + ')' : defaultLabel;
+  btn.classList.toggle('active', n > 0);
+}
+
+function msToggle(fid) {
+  const dd = document.getElementById('dd-' + fid);
+  const open = dd.classList.contains('open');
+  FILTER_FIELDS.forEach(f => { const d = document.getElementById('dd-' + f.id); if (d) d.classList.remove('open'); });
+  if (!open) {
+    dd.classList.add('open');
+    const s = dd.querySelector('.ms-search');
+    s.value = ''; msSearch(fid, ''); s.focus();
+  }
+}
+
+function msClose(fid) {
+  const dd = document.getElementById('dd-' + fid);
+  if (dd) dd.classList.remove('open');
+}
+
+function msClear(fid) {
+  SEL[fid].clear();
+  const field = FILTER_FIELDS.find(f => f.id === fid);
+  msUpdateLabel(fid, field.label);
+  msSearch(fid, '');
+  applyFilters();
 }
 
 function updateDependentFilters() {
@@ -690,36 +813,24 @@ function updateDependentFilters() {
 
 function applyFilters() {
   const q = document.getElementById('search-input').value.toLowerCase();
-  const cat = document.getElementById('f-categoria').value;
-  const sub = document.getElementById('f-subcategoria').value;
-  const tipo = document.getElementById('f-tipo').value;
-  const linea = document.getElementById('f-linea').value;
-  const marca = document.getElementById('f-marca').value;
-  const aplic = document.getElementById('f-aplicacion').value;
-
   filtered = allData.filter(r => {
     if (q && !(r[C.REF]+' '+r[C.PRODUCTO]+' '+r[C.MARCA]+' '+r[C.ALTERNOS]).toLowerCase().includes(q)) return false;
-    if (cat && r[C.CATEGORIA] !== cat) return false;
-    if (sub && r[C.SUBCATEGORIA] !== sub) return false;
-    if (tipo && r[C.TIPO] !== tipo) return false;
-    if (linea && r[C.LINEA] !== linea) return false;
-    if (marca && r[C.MARCA] !== marca) return false;
-    if (aplic && r[C.APLICACION] !== aplic) return false;
+    for (const f of FILTER_FIELDS) {
+      if (SEL[f.id].size > 0 && !SEL[f.id].has(r[f.col])) return false;
+    }
     return true;
   });
-
   renderTable();
   document.getElementById('results-meta').innerHTML =
     allData.length > 0
       ? 'Mostrando <strong>' + filtered.length + '</strong> de <strong>' + allData.length + '</strong> productos'
       : '';
-  updateDependentFilters();
+  msRefresh();
 }
 
 function clearAll() {
   document.getElementById('search-input').value = '';
-  ['f-categoria','f-subcategoria','f-tipo','f-linea','f-marca','f-aplicacion']
-    .forEach(id => { document.getElementById(id).value = ''; });
+  FILTER_FIELDS.forEach(f => { SEL[f.id].clear(); msUpdateLabel(f.id, f.label); });
   closeDetail();
   applyFilters();
 }
