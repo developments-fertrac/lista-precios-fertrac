@@ -221,6 +221,21 @@
   .price-card .amount { font-size: 1.05rem; font-weight: 700; color: var(--green); }
   .price-card.promo { background: #fff8e1; }
   .price-card.promo .amount { color: #e65100; }
+  .info-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 10px;
+    margin-top: 8px;
+  }
+  .info-card {
+    border-radius: 10px;
+    padding: 12px;
+    text-align: center;
+  }
+  .info-card label { font-size: 0.72rem; color: var(--subtext); display: block; margin-bottom: 6px; }
+  .info-card .value { font-size: 0.95rem; font-weight: 700; }
+  .info-card.condicion { background: var(--green-pale); }
+  .info-card.condicion .value { color: var(--green); }
   .product-image {
     width: 100%;
     max-width: 200px;
@@ -760,8 +775,10 @@ function showDetail(idx) {
         '</div>' +
         '<div class="detail-section" style="margin-top:16px">' +
           '<h3>📦 Información comercial</h3>' +
-          drow('Condición', r[C.CONDICION]) +
-          '<div class="detail-row"><label>Inventario</label><span class="inv-badge ' + invClass + '">' + invText + '</span></div>' +
+          '<div class="info-cards">' +
+            '<div class="info-card condicion"><label>Condición</label><div class="value">' + (r[C.CONDICION]||'—') + '</div></div>' +
+            '<div class="info-card" style="background:' + (inv > 10 ? '#d4edda' : inv > 0 ? '#fff3cd' : '#f8d7da') + '"><label>Inventario</label><div class="value" style="color:' + (inv > 10 ? '#155724' : inv > 0 ? '#856404' : '#721c24') + '">' + invText + '</div></div>' +
+          '</div>' +
           drow('Unid. mín. de venta', r[C.UND_MIN]) +
           drow('Unid. máx. de venta', r[C.UND_MAX]) +
           drow('Escala (≥ unidades)', r[C.UND_ESCALA]) +
