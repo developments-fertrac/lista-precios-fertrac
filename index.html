@@ -132,26 +132,6 @@
     background: white;
     outline: none;
   }
-  /* MULTISELECT */
-  .ms-wrap { position: relative; }
-  .ms-btn { width:100%; padding:8px 10px; border:1.5px solid var(--border); border-radius:8px; font-size:0.82rem; background:white; text-align:left; cursor:pointer; display:flex; align-items:center; justify-content:space-between; gap:4px; color:var(--text); white-space:nowrap; overflow:hidden; }
-  .ms-btn.active { border-color:var(--green); background:var(--green-pale); color:var(--green); font-weight:600; }
-  .ms-btn .ms-label { overflow:hidden; text-overflow:ellipsis; flex:1; }
-  .ms-btn .ms-arrow { font-size:0.65rem; flex-shrink:0; }
-  .ms-dropdown { display:none; position:absolute; top:calc(100% + 4px); left:0; min-width:220px; background:white; border:1.5px solid var(--border); border-radius:10px; box-shadow:0 8px 24px rgba(0,0,0,0.12); z-index:300; overflow:hidden; }
-  .ms-dropdown.open { display:block; }
-  .ms-search { width:100%; padding:8px 12px; border:none; border-bottom:1px solid var(--border); font-size:0.82rem; outline:none; background:#fafafa; }
-  .ms-options { max-height:200px; overflow-y:auto; }
-  .ms-option { display:flex; align-items:center; gap:8px; padding:8px 12px; font-size:0.82rem; cursor:pointer; color:var(--text); }
-  .ms-option:hover { background:var(--green-pale); }
-  .ms-option input[type=checkbox] { accent-color:var(--green); width:14px; height:14px; flex-shrink:0; }
-  .ms-option.checked { background:var(--green-pale); color:var(--green); font-weight:600; }
-  .ms-empty { padding:10px 12px; font-size:0.8rem; color:var(--subtext); text-align:center; }
-  .ms-footer { padding:8px 12px; border-top:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; background:#fafafa; }
-  .ms-clear { font-size:0.75rem; color:var(--subtext); cursor:pointer; background:none; border:none; padding:0; }
-  .ms-clear:hover { color:var(--green); }
-  .ms-ok { background:var(--green); color:white; border:none; border-radius:6px; padding:5px 14px; font-size:0.8rem; font-weight:700; cursor:pointer; }
-  .ms-ok:hover { background:var(--green-light); }
   .results-meta { font-size: 0.85rem; color: var(--subtext); margin-bottom: 10px; }
   .results-meta strong { color: var(--green); }
   .table-wrapper {
@@ -469,7 +449,14 @@
       <input type="text" id="search-input" placeholder="🔍 Buscar por referencia, producto, marca..." oninput="applyFilters()">
       <button id="clear-btn" onclick="clearAll()">🧹 Limpiar</button>
     </div>
-    <div class="filters-grid" id="filters-grid"></div>
+    <div class="filters-grid">
+      <select id="f-categoria" onchange="applyFilters()"><option value="">Categoría</option></select>
+      <select id="f-subcategoria" onchange="applyFilters()"><option value="">Subcategoría</option></select>
+      <select id="f-tipo" onchange="applyFilters()"><option value="">Tipo de producto</option></select>
+      <select id="f-linea" onchange="applyFilters()"><option value="">Línea</option></select>
+      <select id="f-marca" onchange="applyFilters()"><option value="">Marca</option></select>
+      <select id="f-aplicacion" onchange="applyFilters()"><option value="">Aplicación</option></select>
+    </div>
   </div>
 
   <div class="results-meta" id="results-meta"></div>
