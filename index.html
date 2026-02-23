@@ -221,6 +221,10 @@
   .price-card .amount { font-size: 1.05rem; font-weight: 700; color: var(--green); }
   .price-card.promo { background: #fff8e1; }
   .price-card.promo .amount { color: #e65100; }
+  .price-card.neto5 { background: #FCE4EC; }
+  .price-card.neto5 .amount { color: #C2185B; }
+  .price-card.neto8 { background: #F8BBD0; }
+  .price-card.neto8 .amount { color: #AD1457; }
   .info-cards {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
@@ -796,10 +800,10 @@ function showDetail(idx) {
         '<div class="detail-section">' +
           '<h3>💰 Precios</h3>' +
           '<div class="price-cards">' +
-            pcard('Precio Bruto', r[C.PRECIO_BRUTO], false) +
-            pcard('Neto -5%', r[C.NETO_5], false) +
-            pcard('Neto -8%', r[C.NETO_8], false) +
-            (r[C.PRECIO_PROMO] ? pcard('🔥 Precio Promo', r[C.PRECIO_PROMO], true) : '') +
+            pcard('Precio Bruto', r[C.PRECIO_BRUTO], '') +
+            pcardClass('Neto -5%', r[C.NETO_5], 'neto5') +
+            (r[C.PRECIO_PROMO] ? pcard('🔥 Precio Promo', r[C.PRECIO_PROMO], true) : pcardClass('Neto -8%', r[C.NETO_8], 'neto8')) +
+            (r[C.PRECIO_PROMO] ? pcardClass('Neto -8%', r[C.NETO_8], 'neto8') : '') +
           '</div>' +
         '</div>' +
         '<div class="detail-section" style="margin-top:16px">' +
@@ -839,6 +843,9 @@ function drow(label, val) {
 }
 function pcard(label, val, isPromo) {
   return '<div class="price-card' + (isPromo?' promo':'') + '"><label>' + label + '</label><div class="amount">' + formatPrice(val) + '</div></div>';
+}
+function pcardClass(label, val, cls) {
+  return '<div class="price-card ' + cls + '"><label>' + label + '</label><div class="amount">' + formatPrice(val) + '</div></div>';
 }
 function openModal(imgEl) {
   const modal = document.getElementById('img-modal');
