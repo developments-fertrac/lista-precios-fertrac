@@ -554,6 +554,48 @@ const C = {
 let allData = [];
 let filtered = [];
 
+// ── MAPEO DE COLORES PARA CONDICIÓN ───────────────────────────────────────
+const CONDITION_COLOR_MAP = [
+  { match: 'NO APLICA MAS DESCUENTOS', bg: '#d5a6bd', text: '#ffffff' },
+  { match: 'NO APLICA CONDICION', bg: '#b7b7b7', text: '#ffffff' },
+  { match: 'NUEVO', bg: '#ffc000', text: '#222222' },
+  { match: 'PROMOCION', bg: '#a4c2f4', text: '#1f2d3d' },
+  { match: 'NO VENTA VOLUMEN', bg: '#00b050', text: '#ffffff' },
+  { match: 'REFERENCIAS VADEN Y MANSONS', bg: '#00eff4', text: '#00363a' }
+];
+
+function normalizeCondition(val) {
+  return String(val || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toUpperCase();
+}
+
+function getConditionStyle(rawCondition) {
+  const rawText = String(rawCondition || '').trim();
+  const normalized = normalizeCondition(rawText);
+
+  const found = CONDITION_COLOR_MAP.find(item => normalized.includes(item.match));
+
+  if (found) {
+    return {
+      text: rawText || '—',
+      bg: found.bg,
+      textColor: found.text,
+      labelColor: found.text === '#ffffff' ? 'rgba(255,255,255,0.9)' : 'rgba(0,0,0,0.65)'
+    };
+  }
+
+  return {
+    text: rawText || '—',
+    bg: '#9bc0d9',
+    textColor: '#455A64',
+    labelColor: '#666'
+  };
+}
+
 // ── SERVICE WORKER ─────────────────────────────────────────────────────────
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/lista-precios-fertrac/sw.js', { scope: '/lista-precios-fertrac/' })
@@ -985,6 +1027,8 @@ function showDetail(idx) {
   const invClass = inv > 10 ? 'inv-ok' : inv > 0 ? 'inv-low' : 'inv-none';
   const invText = inv > 10 ? inv + ' unidades' : inv > 0 ? inv + ' unidades (bajo)' : 'Sin stock';
 
+  const cond = getConditionStyle(r[C.CONDICION]);
+
   const fileId = extractDriveId(r[C.FOTO]);
   const imgHtml = fileId
     ? '<img id="detail-img" class="product-image" alt="Foto producto" onclick="openModal(this)" style="cursor:zoom-in">'
@@ -1018,7 +1062,10 @@ function showDetail(idx) {
         '<div class="detail-section" style="margin-top:16px">' +
           '<h3>📦 Información comercial</h3>' +
           '<div class="info-cards">' +
-            '<div class="info-card condicion"><label>Condición</label><div class="value">' + (r[C.CONDICION]||'—') + '</div></div>' +
+            '<div class="info-card condicion" style="background:' + cond.bg + ';">' +
+              '<label style="color:' + cond.labelColor + ';">Condición</label>' +
+              '<div class="value" style="color:' + cond.textColor + '; white-space:normal; line-height:1.2;">' + cond.text + '</div>' +
+            '</div>' +
             '<div class="info-card" style="background:' + (inv > 10 ? '#d4edda' : inv > 0 ? '#fff3cd' : '#f8d7da') + '"><label>Inventario</label><div class="value" style="color:' + (inv > 10 ? '#155724' : inv > 0 ? '#856404' : '#721c24') + '">' + invText + '</div></div>' +
           '</div>' +
           drow('Unid. mín. de venta', r[C.UND_MIN]) +
