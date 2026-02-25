@@ -672,6 +672,7 @@ function buildFilters() {
       wrap.id = 'wrap-' + f.id;
 
       const btn = document.createElement('button');
+      btn.type = 'button';
       btn.className = 'ms-btn';
       btn.id = 'btn-' + f.id;
       btn.onclick = (function(id){ return function(){ msToggle(id); }; })(f.id);
@@ -702,10 +703,12 @@ function buildFilters() {
       const footer = document.createElement('div');
       footer.className = 'ms-footer';
       const clearBtn = document.createElement('button');
+      clearBtn.type = 'button';
       clearBtn.className = 'ms-clear';
       clearBtn.textContent = '✕ Limpiar';
       clearBtn.onclick = (function(id){ return function(){ msClear(id); }; })(f.id);
       const okBtn = document.createElement('button');
+      okBtn.type = 'button';
       okBtn.className = 'ms-ok';
       okBtn.textContent = 'OK';
       okBtn.onclick = (function(id){ return function(){ msClose(id); }; })(f.id);
@@ -733,9 +736,10 @@ function buildFilters() {
   msRefresh();
 }
 
-function msRefresh() {
+function msRefresh(skipFid = null) {
   if (allData.length === 0) return;
   const q = document.getElementById('search-input').value.toLowerCase();
+
   FILTER_FIELDS.forEach(target => {
     const subset = allData.filter(r => {
       if (q && !(r[C.REF]+' '+r[C.PRODUCTO]+' '+r[C.MARCA]+' '+r[C.ALTERNOS]).toLowerCase().includes(q)) return false;
@@ -745,8 +749,20 @@ function msRefresh() {
       }
       return true;
     });
+
     const vals = [...new Set(subset.map(r => r[target.col]).filter(Boolean))].sort();
-    msRenderOpts(target.id, vals, '');
+
+    // Mantener texto de búsqueda del dropdown (si existe)
+    const searchEl = document.querySelector('#dd-' + target.id + ' .ms-search');
+    const currentSearch = searchEl ? searchEl.value : '';
+
+    // No re-renderizar el filtro activo para evitar perder scroll/foco
+    if (skipFid && target.id === skipFid) {
+      msUpdateLabel(target.id, target.label);
+      return;
+    }
+
+    msRenderOpts(target.id, vals, currentSearch);
     msUpdateLabel(target.id, target.label);
   });
 }
@@ -795,10 +811,39 @@ function msSearch(fid, search) {
 }
 
 function msToggleOpt(fid, val, checked) {
-  if (checked) SEL[fid].add(val); else SEL[fid].delete(val);
+  // Guardar scroll de la página y del checklist del filtro actual
+  const pageY = window.scrollY;
+  const optsEl = document.getElementById('opts-' + fid);
+  const optsScroll = optsEl ? optsEl.scrollTop : 0;
+
+  if (checked) SEL[fid].add(val);
+  else SEL[fid].delete(val);
+
   const field = FILTER_FIELDS.find(f => f.id === fid);
   msUpdateLabel(fid, field.label);
-  applyFilters();
+
+  // Aplicar filtros preservando scroll y sin re-renderizar el dropdown activo
+  applyFilters({ keepWindowScroll: true, skipRefreshFor: fid });
+
+  // Mantener dropdown abierto + restaurar scroll interno + foco
+  requestAnimationFrame(() => {
+    window.scrollTo({ top: pageY, behavior: 'auto' });
+
+    const dd = document.getElementById('dd-' + fid);
+    if (dd) dd.classList.add('open');
+
+    const opts = document.getElementById('opts-' + fid);
+    if (opts) opts.scrollTop = optsScroll;
+
+    const searchInput = document.querySelector('#dd-' + fid + ' .ms-search');
+    if (searchInput) {
+      try {
+        searchInput.focus({ preventScroll: true });
+      } catch (e) {
+        searchInput.focus();
+      }
+    }
+  });
 }
 
 function msUpdateLabel(fid, defaultLabel) {
@@ -827,15 +872,33 @@ function msClose(fid) {
 }
 
 function msClear(fid) {
+  const pageY = window.scrollY;
+  const optsEl = document.getElementById('opts-' + fid);
+  const optsScroll = optsEl ? optsEl.scrollTop : 0;
+
   SEL[fid].clear();
   const field = FILTER_FIELDS.find(f => f.id === fid);
   msUpdateLabel(fid, field.label);
   msSearch(fid, '');
-  applyFilters();
+
+  applyFilters({ keepWindowScroll: true, skipRefreshFor: fid });
+
+  requestAnimationFrame(() => {
+    window.scrollTo({ top: pageY, behavior: 'auto' });
+
+    const dd = document.getElementById('dd-' + fid);
+    if (dd) dd.classList.add('open');
+
+    const opts = document.getElementById('opts-' + fid);
+    if (opts) opts.scrollTop = optsScroll;
+  });
 }
 
 
-function applyFilters() {
+function applyFilters(options = {}) {
+  const { keepWindowScroll = false, skipRefreshFor = null } = options;
+  const savedWindowY = keepWindowScroll ? window.scrollY : null;
+
   const q = document.getElementById('search-input').value.toLowerCase();
   filtered = allData.filter(r => {
     if (q && !(r[C.REF]+' '+r[C.PRODUCTO]+' '+r[C.MARCA]+' '+r[C.ALTERNOS]).toLowerCase().includes(q)) return false;
@@ -844,12 +907,21 @@ function applyFilters() {
     }
     return true;
   });
+
   renderTable();
+
   document.getElementById('results-meta').innerHTML =
     allData.length > 0
       ? 'Mostrando <strong>' + filtered.length + '</strong> de <strong>' + allData.length + '</strong> productos'
       : '';
-  msRefresh();
+
+  msRefresh(skipRefreshFor);
+
+  if (keepWindowScroll && savedWindowY !== null) {
+    requestAnimationFrame(() => {
+      window.scrollTo({ top: savedWindowY, behavior: 'auto' });
+    });
+  }
 }
 
 function clearAll() {
