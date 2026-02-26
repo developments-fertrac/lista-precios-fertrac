@@ -696,6 +696,7 @@ const FILTER_FIELDS = [
   { id: 'f-linea',        col: C.LINEA,        label: 'Línea' },
   { id: 'f-marca',        col: C.MARCA,        label: 'Marca' },
   { id: 'f-aplicacion',   col: C.APLICACION,   label: 'Aplicación' },
+  { id: 'f-condicion',    col: C.CONDICION,    label: 'Condición', colored: true },
 ];
 
 const SEL = {};  // selected values per filter: Set
@@ -822,16 +823,37 @@ function msRenderOpts(fid, vals, search) {
     c.appendChild(empty);
     return;
   }
+  const field = FILTER_FIELDS.find(f => f.id === fid);
   shown.forEach(function(v) {
     const chk = SEL[fid].has(v);
     const lbl = document.createElement('label');
     lbl.className = 'ms-option' + (chk ? ' checked' : '');
-    const cb = document.createElement('input');
-    cb.type = 'checkbox';
-    cb.checked = chk;
-    cb.onchange = (function(id, val){ return function(){ msToggleOpt(id, val, this.checked); }; })(fid, v);
-    lbl.appendChild(cb);
-    lbl.appendChild(document.createTextNode(v));
+    // If this is the condition filter, apply color swatch
+    if (field && field.colored) {
+      const condStyle = getConditionStyle(v);
+      lbl.style.borderLeft = '4px solid ' + condStyle.bg;
+      lbl.style.paddingLeft = '10px';
+      if (chk) {
+        lbl.style.background = condStyle.bg + '33'; // light tint
+      }
+      // Color dot
+      const dot = document.createElement('span');
+      dot.style.cssText = 'display:inline-block;width:12px;height:12px;border-radius:50%;background:' + condStyle.bg + ';flex-shrink:0;margin-right:2px;border:1px solid rgba(0,0,0,0.15)';
+      const cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.checked = chk;
+      cb.onchange = (function(id, val){ return function(){ msToggleOpt(id, val, this.checked); }; })(fid, v);
+      lbl.appendChild(cb);
+      lbl.appendChild(dot);
+      lbl.appendChild(document.createTextNode(' ' + v));
+    } else {
+      const cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.checked = chk;
+      cb.onchange = (function(id, val){ return function(){ msToggleOpt(id, val, this.checked); }; })(fid, v);
+      lbl.appendChild(cb);
+      lbl.appendChild(document.createTextNode(v));
+    }
     c.appendChild(lbl);
   });
   c.scrollTop = scrollTop;
@@ -1098,14 +1120,27 @@ function drow(label, val) {
   return '<div class="detail-row"><label>' + label + '</label><span>' + (val||'—') + '</span></div>';
 }
 function pcard(label, val, isPromo) {
-  return '<div class="price-card' + (isPromo?' promo':'') + '"><label>' + label + '</label><div class="amount">' + formatPrice(val) + '</div></div>';
+  const n = parseFloat(String(val||'').replace(/[^0-9.]/g, ''));
+  const isPrecoBruto = label === 'Precio Bruto';
+  const isInvalidPrice = isPrecoBruto && val && isNaN(n);
+  const extraStyle = isInvalidPrice ? 'background:#fde8e8;border:2px solid #e53935;' : '';
+  const amountStyle = isInvalidPrice ? 'color:#c62828;' : '';
+  return '<div class="price-card' + (isPromo?' promo':'') + '" style="' + extraStyle + '"><label>' + label + '</label><div class="amount" style="' + amountStyle + '">' + formatPrice(val) + (isInvalidPrice ? ' ⚠️' : '') + '</div></div>';
 }
 function pcardClass(label, val, cls) {
   return '<div class="price-card ' + cls + '"><label>' + label + '</label><div class="amount">' + formatPrice(val) + '</div></div>';
 }
 function openModal(imgEl) {
   const modal = document.getElementById('img-modal');
-  document.getElementById('img-modal-src').src = imgEl.src;
+  const src = imgEl.src;
+  document.getElementById('img-modal-src').src = src;
+  // Set download button
+  const dlBtn = document.getElementById('img-download-btn');
+  dlBtn.href = src;
+  // Try to get a filename from the current detail reference
+  const titleEl = document.getElementById('detail-title');
+  const fname = (titleEl ? titleEl.textContent.trim().replace(/[^a-zA-Z0-9_-]/g,'_') : 'producto') + '.jpg';
+  dlBtn.setAttribute('download', fname);
   modal.style.display = 'flex';
   document.body.style.overflow = 'hidden';
 }
@@ -1158,11 +1193,30 @@ window.addEventListener('scroll', () => {
 </div><!-- end app-content -->
 
 <!-- IMAGE MODAL -->
-<div id="img-modal" onclick="closeModal()" style="
+<div id="img-modal" style="
   display:none;position:fixed;inset:0;z-index:999;
-  background:rgba(0,0,0,0.85);
+  background:rgba(0,0,0,0.75);
   align-items:center;justify-content:center;padding:20px;">
-  <img id="img-modal-src" style="max-width:100%;max-height:90vh;border-radius:10px;object-fit:contain;">
+  <div id="img-modal-inner" onclick="event.stopPropagation()" style="
+    background:white;border-radius:14px;padding:16px;
+    display:flex;flex-direction:column;align-items:center;gap:12px;
+    max-width:95vw;max-height:95vh;box-shadow:0 8px 40px rgba(0,0,0,0.3);">
+    <img id="img-modal-src" style="max-width:100%;max-height:75vh;border-radius:8px;object-fit:contain;background:white;">
+    <div style="display:flex;gap:10px;">
+      <a id="img-download-btn" href="#" download="producto.jpg" style="
+        background:#F47920;color:white;border:none;border-radius:8px;
+        padding:9px 20px;font-size:0.88rem;font-weight:700;
+        cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:6px;">
+        ⬇️ Descargar foto
+      </a>
+      <button onclick="closeModal()" style="
+        background:#eee;color:#333;border:none;border-radius:8px;
+        padding:9px 16px;font-size:0.88rem;cursor:pointer;">
+        ✕ Cerrar
+      </button>
+    </div>
+  </div>
+  <div onclick="closeModal()" style="position:fixed;inset:0;z-index:-1;"></div>
 </div>
 </body>
 </html>
