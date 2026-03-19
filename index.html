@@ -9,6 +9,7 @@
 <meta name="apple-mobile-web-app-title" content="Lista Fertrac">
 <title>Lista de Precios - Fertrac</title>
 <link rel="manifest" href="/lista-precios-fertrac/manifest.json">
+<script src="capacitor.js" onerror="console.log('No Capacitor runtime')"></script>
 
 <style>
   :root {
@@ -482,7 +483,59 @@ const CLIENT_ID = '748686271759-3ebepqvfssbpn650m8pu1l6umdq093fo.apps.googleuser
 const ALLOWED_DOMAIN = 'fertrac.com';
 let userEmail = null;
 
-function loginWithGoogle() {
+// Detectar si estamos dentro de la app nativa de Capacitor
+const isNativeApp = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
+
+async function loginWithGoogle() {
+  document.getElementById('login-loading').style.display = 'block';
+
+  if (isNativeApp) {
+    // Login nativo con plugin de Capacitor (dentro de la app Android)
+    try {
+      const { GoogleAuth } = await import('https://cdn.jsdelivr.net/npm/@codetrix-studio/capacitor-google-auth/dist/esm/index.js').catch(() => null) || {};
+
+      // Usar el plugin desde window.Capacitor.Plugins
+      const plugin = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.GoogleAuth;
+      if (!plugin) throw new Error('Plugin no disponible');
+
+      await plugin.initialize({
+        clientId: CLIENT_ID,
+        scopes: ['email', 'profile'],
+        grantOfflineAccess: false
+      });
+
+      const result = await plugin.signIn();
+      const email = result && (result.email || (result.authentication && result.authentication.idToken));
+
+      // Obtener email del resultado
+      let userEmailResult = result.email || '';
+      if (!userEmailResult && result.authentication) {
+        // Decodificar el idToken para obtener el email
+        const payload = JSON.parse(atob(result.authentication.idToken.split('.')[1]));
+        userEmailResult = payload.email || '';
+      }
+
+      if (userEmailResult && userEmailResult.endsWith('@' + ALLOWED_DOMAIN)) {
+        userEmail = userEmailResult;
+        localStorage.setItem('fertrac_user', userEmail);
+        showApp();
+      } else {
+        document.getElementById('login-loading').style.display = 'none';
+        document.getElementById('access-denied').style.display = 'block';
+      }
+    } catch(e) {
+      console.error('Error login nativo:', e);
+      document.getElementById('login-loading').style.display = 'none';
+      // Fallback al login web si falla el nativo
+      loginWithGoogleWeb();
+    }
+  } else {
+    // Login web normal (cuando se abre en navegador)
+    loginWithGoogleWeb();
+  }
+}
+
+function loginWithGoogleWeb() {
   const redirectUri = encodeURIComponent(window.location.href.split('?')[0]);
   const scope = encodeURIComponent('email profile');
   const url = 'https://accounts.google.com/o/oauth2/v2/auth' +
@@ -529,7 +582,7 @@ function showApp() {
 }
 
 function checkAuth() {
-  if (handleOAuthCallback()) return;
+  if (!isNativeApp && handleOAuthCallback()) return;
   const saved = localStorage.getItem('fertrac_user');
   if (saved && saved.endsWith('@' + ALLOWED_DOMAIN)) {
     userEmail = saved;
