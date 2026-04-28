@@ -2,10 +2,10 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#1a5c2a">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="apple-mobile-web-app-title" content="Lista Fertrac">
 <title>Lista de Precios - Fertrac</title>
 <link rel="manifest" href="/lista-precios-fertrac/manifest.json">
@@ -27,6 +27,7 @@
   header {
     background: white;
     padding: 8px 16px;
+    padding-top: env(safe-area-inset-top, 8px);
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -743,12 +744,12 @@ async function syncData() {
 
 // ── FILTERS ────────────────────────────────────────────────────────────────
 const FILTER_FIELDS = [
-  { id: 'f-categoria',    col: C.CATEGORIA,   label: 'Categoría' },
-  { id: 'f-subcategoria', col: C.SUBCATEGORIA, label: 'Subcategoría' },
-  { id: 'f-tipo',         col: C.TIPO,         label: 'Tipo de producto' },
+  // { id: 'f-categoria',    col: C.CATEGORIA,   label: 'Categoría' },
+  // { id: 'f-subcategoria', col: C.SUBCATEGORIA, label: 'Subcategoría' },
+  // { id: 'f-tipo',         col: C.TIPO,         label: 'Tipo de producto' },
   { id: 'f-linea',        col: C.LINEA,        label: 'Línea' },
   { id: 'f-marca',        col: C.MARCA,        label: 'Marca' },
-  { id: 'f-aplicacion',   col: C.APLICACION,   label: 'Aplicación' },
+  // { id: 'f-aplicacion',   col: C.APLICACION,   label: 'Aplicación' },
   { id: 'f-condicion',    col: C.CONDICION,    label: 'Condición', colored: true },
 ];
 
