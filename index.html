@@ -635,13 +635,15 @@ let allData = [];
 let filtered = [];
 
 // ── MAPEO DE COLORES PARA CONDICIÓN ───────────────────────────────────────
+// Los valores corresponden EXACTAMENTE a los textos del campo CONDICION en la hoja:
+// MAGENTA, AGUA MARINA, NO TIENE, NUEVAS, PROMOCION, VERDE
 const CONDITION_COLOR_MAP = [
-  { match: 'NO APLICA MAS DESCUENTOS', bg: '#b5658d', text: '#222222' }, // magenta más oscuro
-  { match: 'NO APLICA CONDICION', bg: '#b7b7b7', text: '#222222'   },
-  { match: 'NUEVO', bg: '#ffc000', text: '#222222' },
-  { match: 'PROMOCION', bg: '#5b8fd6', text: '#222222' }, // azul más oscuro
-  { match: 'NO VENTA VOLUMEN', bg: '#00b050', text: '#222222' },
-  { match: 'REFERENCIAS VADEN Y MANSONS', bg: '#00eff4', text: '#222222' }
+  { match: 'MAGENTA',     bg: '#e7a3c9', text: '#222222' }, // magenta / rosa
+  { match: 'AGUA MARINA', bg: '#a5e8e6', text: '#222222' }, // cian claro / aguamarina
+  { match: 'NUEVAS',      bg: '#ffc000', text: '#222222' }, // amarillo oscuro
+  { match: 'PROMOCION',   bg: '#9fc5e8', text: '#222222' }, // azul claro
+  { match: 'VERDE',       bg: '#a8d18d', text: '#222222' }  // verde
+  // NO TIENE → sin color (se filtra abajo en hasCondition())
 ];
 
 function normalizeCondition(val) {
@@ -668,20 +670,24 @@ function getConditionStyle(rawCondition) {
     };
   }
 
+  // Fallback (NO TIENE, vacío, valores desconocidos): gris neutro
   return {
     text: rawText || '—',
-    bg: '#9bc0d9',
-    textColor: '#455A64',
-    labelColor: '#666'
+    bg: '#e0e0e0',
+    textColor: '#555555',
+    labelColor: '#777777'
   };
 }
 
-// Determina si una condición debe colorear la fila (excluye "NO TIENE" y similares)
+// Determina si una condición debe colorear la fila/cuadro.
+// Solo se colorea si el texto coincide con alguna entrada del CONDITION_COLOR_MAP.
+// "NO TIENE", vacío y cualquier otro valor desconocido → sin color.
 function hasCondition(rawCondition) {
   const normalized = normalizeCondition(rawCondition);
   if (!normalized) return false;
   if (normalized === 'NO TIENE' || normalized === 'NO APLICA' || normalized === 'N/A' || normalized === '-') return false;
-  return true;
+  // Solo colorear si hay match en el mapa
+  return CONDITION_COLOR_MAP.some(item => normalized.includes(item.match));
 }
 
 // ── SERVICE WORKER ─────────────────────────────────────────────────────────
