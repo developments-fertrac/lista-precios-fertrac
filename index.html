@@ -156,10 +156,28 @@
   table { width: 100%; border-collapse: collapse; }
   thead { background: var(--green); color: white; }
   thead th { padding: 11px 14px; text-align: left; font-size: 0.82rem; font-weight: 600; }
-  tbody tr { border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.15s; }
-  tbody tr:hover { background: var(--green-pale); }
-  tbody tr.selected { background: #d4edda; }
-  tbody td { padding: 10px 14px; font-size: 0.85rem; }
+  tbody tr {
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    transition: filter 0.15s;
+    border-left: 4px solid transparent;
+  }
+  tbody tr:hover { filter: brightness(0.95); }
+  tbody tr.selected { box-shadow: inset 0 0 0 2px var(--green); }
+  tbody td { padding: 10px 14px; font-size: 0.85rem; vertical-align: middle; }
+  td.td-precio { font-weight: 700; color: var(--green); white-space: nowrap; text-align: right; }
+  td.td-inv { text-align: center; font-weight: 600; }
+  .inv-pill {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    min-width: 36px;
+  }
+  .inv-pill.ok   { background: #d4edda; color: #155724; }
+  .inv-pill.low  { background: #fff3cd; color: #856404; }
+  .inv-pill.none { background: #f8d7da; color: #721c24; }
   .tag {
     background: var(--green-pale);
     color: var(--green);
@@ -310,11 +328,19 @@
   /* MOBILE TABLE */
   @media (max-width: 600px) {
     thead { display: none; }
-    tbody tr { display: block; padding: 10px 14px; border-bottom: 1px solid var(--border); }
-    tbody td { display: inline; padding: 0; border: none; font-size: 0.83rem; }
-    tbody td.td-ref { display: block; font-weight: 700; font-size: 0.9rem; margin-bottom: 4px; }
-    tbody td.td-marca { display: inline; margin-right: 6px; }
-    tbody td.td-producto { display: block; color: var(--subtext); font-size: 0.8rem; margin-top: 3px; }
+    tbody tr {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      grid-column-gap: 10px;
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+    }
+    tbody td { display: block; padding: 0; border: none; font-size: 0.83rem; }
+    tbody td.td-ref       { grid-column: 1; grid-row: 1; font-weight: 700; font-size: 0.9rem; margin-bottom: 4px; }
+    tbody td.td-inv       { grid-column: 2; grid-row: 1; text-align: right; align-self: start; }
+    tbody td.td-marca     { grid-column: 1; grid-row: 2; margin-bottom: 3px; }
+    tbody td.td-precio    { grid-column: 2; grid-row: 2; text-align: right; align-self: center; font-size: 0.88rem; }
+    tbody td.td-producto  { grid-column: 1 / -1; grid-row: 3; color: var(--subtext); font-size: 0.8rem; margin-top: 3px; }
   }
   .offline-banner {
     background: #fff3cd;
@@ -648,6 +674,14 @@ function getConditionStyle(rawCondition) {
     textColor: '#455A64',
     labelColor: '#666'
   };
+}
+
+// Determina si una condición debe colorear la fila (excluye "NO TIENE" y similares)
+function hasCondition(rawCondition) {
+  const normalized = normalizeCondition(rawCondition);
+  if (!normalized) return false;
+  if (normalized === 'NO TIENE' || normalized === 'NO APLICA' || normalized === 'N/A' || normalized === '-') return false;
+  return true;
 }
 
 // ── SERVICE WORKER ─────────────────────────────────────────────────────────
@@ -1059,14 +1093,36 @@ function renderTable() {
   const show = filtered.slice(0, 200);
   const rows = show.map(r => {
     const idx = allData.indexOf(r);
-    return '<tr onclick="showDetail(' + idx + ')" data-idx="' + idx + '">' +
+
+    // Inventario
+    const inv = parseFloat(r[C.INV]) || 0;
+    const invCls = inv > 10 ? 'ok' : inv > 0 ? 'low' : 'none';
+
+    // Color de fila por condición (si aplica)
+    const condRaw = r[C.CONDICION];
+    let rowStyle = '';
+    if (hasCondition(condRaw)) {
+      const c = getConditionStyle(condRaw);
+      // Tinte de fondo (~20% opacidad) + barra lateral sólida del color
+      rowStyle = 'background:' + c.bg + '33; border-left-color:' + c.bg + ';';
+    }
+
+    return '<tr onclick="showDetail(' + idx + ')" data-idx="' + idx + '" style="' + rowStyle + '">' +
       '<td class="td-ref">' + (r[C.REF]||'—') + '</td>' +
       '<td class="td-marca"><span class="tag">' + (r[C.MARCA]||'—') + '</span></td>' +
       '<td class="td-producto">' + (r[C.PRODUCTO]||'—') + '</td>' +
+      '<td class="td-inv"><span class="inv-pill ' + invCls + '">' + inv + '</span></td>' +
+      '<td class="td-precio">' + formatPrice(r[C.PRECIO_BRUTO]) + '</td>' +
       '</tr>';
   }).join('');
   wrapper.innerHTML =
-    '<table><thead><tr><th>Referencia</th><th>Marca</th><th>Producto</th></tr></thead>' +
+    '<table><thead><tr>' +
+      '<th>Referencia</th>' +
+      '<th>Marca</th>' +
+      '<th>Producto</th>' +
+      '<th style="text-align:center">Inv.</th>' +
+      '<th style="text-align:right">Precio Bruto</th>' +
+    '</tr></thead>' +
     '<tbody>' + rows + '</tbody></table>' +
     (filtered.length > 200 ? '<div style="text-align:center;padding:10px;font-size:0.8rem;color:#888">Mostrando 200 de ' + filtered.length + ' resultados. Refina tu búsqueda.</div>' : '');
 }
