@@ -249,12 +249,11 @@
   }
   .price-card label { font-size: 0.72rem; color: var(--subtext); display: block; margin-bottom: 4px; }
   .price-card .amount { font-size: 1.05rem; font-weight: 700; color: var(--green); }
-# precio promo
   .price-card.promo { background: #e6d7cf; }
   .price-card.promo .amount { color: #ef5f06; }
-  .price-card.neto5 { background: #E8D7CF; }   /* terracota suave */
-  .price-card.neto5 .amount { color: #A14A2A; }  
-  .price-card.neto8 { background: #DDBFB2; }   /* terracota más intenso */
+  .price-card.neto5 { background: #E8D7CF; }
+  .price-card.neto5 .amount { color: #A14A2A; }
+  .price-card.neto8 { background: #DDBFB2; }
   .price-card.neto8 .amount { color: #7F3218; }
   .info-cards {
     display: grid;
@@ -270,7 +269,6 @@
   .info-card label { font-size: 0.72rem; color: var(--subtext); display: block; margin-bottom: 6px; }
   .info-card .value { font-size: 0.95rem; font-weight: 700; }
   .info-card.condicion { background: #9bc0d9; }
-# precio condicion
   .info-card.condicion .value { color: #455A64; }
   .product-image {
     width: 100%;
@@ -484,7 +482,7 @@
 
   <div class="search-box">
     <div class="search-row">
-      <input type="text" id="search-input" placeholder="🔍 Buscar por referencia, producto, marca..." oninput="applyFilters()">
+      <input type="text" id="search-input" placeholder="🔍 Buscar por referencia, producto, marca...">
       <button id="clear-btn" onclick="clearAll()">🧹 Limpiar</button>
     </div>
     <div class="filters-grid" id="filters-grid"></div>
@@ -622,30 +620,28 @@ window.onload = function() { checkAuth(); };
 
 const APPS_SCRIPT_URL = 'https://script.google.com/a/macros/fertrac.com/s/AKfycbztitt85lzEy2Bl7iecjX-IS56DHY1OOxPVlPbyvwxWZpDofLQsdh-stXxBvE_xIW3L/exec';
 const ACCESS_KEY = 'fertrac2024';
-// Agrega esta línea junto a las otras variables globales
 const LOG_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzREONy5Avg7lQMSaOyUwcmEzoVAAyLsPRT1dBNr7dyX3l7_AnwCDVIjMVnZimuuNXy/exec';
 
 // ========== REGISTRO DE BÚSQUEDAS ==========
 function logSearchQuery(query) {
   // No registrar búsquedas vacías o muy cortas
   if (!query || query.trim().length < 2) return;
-  
+
   // Evitar registros duplicados muy seguidos (mínimo 2 segundos entre registros)
   var now = Date.now();
   if (window._lastLogTime && (now - window._lastLogTime) < 2000) return;
   window._lastLogTime = now;
-  
+
   // Enviar en segundo plano (no bloquea la búsqueda)
-  var url = LOG_SCRIPT_URL 
-    + '?key=' + ACCESS_KEY 
+  var url = LOG_SCRIPT_URL
+    + '?key=' + ACCESS_KEY
     + '&email=' + encodeURIComponent(userEmail || 'sin-sesion')
     + '&q=' + encodeURIComponent(query.trim());
-  
+
   fetch(url).catch(function(err) {
     console.log('Error registrando búsqueda:', err);
   });
 }
-
 
 const C = {
   REF: 0, FOTO: 1, ALTERNOS: 2, PRODUCTO: 3, CATEGORIA: 4,
@@ -659,15 +655,12 @@ let allData = [];
 let filtered = [];
 
 // ── MAPEO DE COLORES PARA CONDICIÓN ───────────────────────────────────────
-// Los valores corresponden EXACTAMENTE a los textos del campo CONDICION en la hoja:
-// MAGENTA, AGUA MARINA, NO TIENE, NUEVAS, PROMOCION, VERDE
 const CONDITION_COLOR_MAP = [
-  { match: 'MAGENTA',     bg: '#e7a3c9', text: '#222222' }, // magenta / rosa
-  { match: 'AGUA MARINA', bg: '#a5e8e6', text: '#222222' }, // cian claro / aguamarina
-  { match: 'NUEVAS',      bg: '#ffc000', text: '#222222' }, // amarillo oscuro
-  { match: 'PROMOCION',   bg: '#9fc5e8', text: '#222222' }, // azul claro
-  { match: 'VERDE',       bg: '#a8d18d', text: '#222222' }  // verde
-  // NO TIENE → sin color (se filtra abajo en hasCondition())
+  { match: 'MAGENTA',     bg: '#e7a3c9', text: '#222222' },
+  { match: 'AGUA MARINA', bg: '#a5e8e6', text: '#222222' },
+  { match: 'NUEVAS',      bg: '#ffc000', text: '#222222' },
+  { match: 'PROMOCION',   bg: '#9fc5e8', text: '#222222' },
+  { match: 'VERDE',       bg: '#a8d18d', text: '#222222' }
 ];
 
 function normalizeCondition(val) {
@@ -694,7 +687,6 @@ function getConditionStyle(rawCondition) {
     };
   }
 
-  // Fallback (NO TIENE, vacío, valores desconocidos): gris neutro
   return {
     text: rawText || '—',
     bg: '#e0e0e0',
@@ -703,14 +695,10 @@ function getConditionStyle(rawCondition) {
   };
 }
 
-// Determina si una condición debe colorear la fila/cuadro.
-// Solo se colorea si el texto coincide con alguna entrada del CONDITION_COLOR_MAP.
-// "NO TIENE", vacío y cualquier otro valor desconocido → sin color.
 function hasCondition(rawCondition) {
   const normalized = normalizeCondition(rawCondition);
   if (!normalized) return false;
   if (normalized === 'NO TIENE' || normalized === 'NO APLICA' || normalized === 'N/A' || normalized === '-') return false;
-  // Solo colorear si hay match en el mapa
   return CONDITION_COLOR_MAP.some(item => normalized.includes(item.match));
 }
 
@@ -808,16 +796,12 @@ async function syncData() {
 
 // ── FILTERS ────────────────────────────────────────────────────────────────
 const FILTER_FIELDS = [
-  // { id: 'f-categoria',    col: C.CATEGORIA,   label: 'Categoría' },
-  // { id: 'f-subcategoria', col: C.SUBCATEGORIA, label: 'Subcategoría' },
-  // { id: 'f-tipo',         col: C.TIPO,         label: 'Tipo de producto' },
   { id: 'f-linea',        col: C.LINEA,        label: 'Línea' },
   { id: 'f-marca',        col: C.MARCA,        label: 'Marca' },
-  // { id: 'f-aplicacion',   col: C.APLICACION,   label: 'Aplicación' },
   { id: 'f-condicion',    col: C.CONDICION,    label: 'Condición', colored: true },
 ];
 
-const SEL = {};  // selected values per filter: Set
+const SEL = {};
 FILTER_FIELDS.forEach(f => { SEL[f.id] = new Set(); });
 let builtOnce = false;
 
@@ -913,11 +897,9 @@ function msRefresh(skipFid = null) {
 
     const vals = [...new Set(subset.map(r => r[target.col]).filter(Boolean))].sort();
 
-    // Mantener texto de búsqueda del dropdown (si existe)
     const searchEl = document.querySelector('#dd-' + target.id + ' .ms-search');
     const currentSearch = searchEl ? searchEl.value : '';
 
-    // No re-renderizar el filtro activo para evitar perder scroll/foco
     if (skipFid && target.id === skipFid) {
       msUpdateLabel(target.id, target.label);
       return;
@@ -946,15 +928,13 @@ function msRenderOpts(fid, vals, search) {
     const chk = SEL[fid].has(v);
     const lbl = document.createElement('label');
     lbl.className = 'ms-option' + (chk ? ' checked' : '');
-    // If this is the condition filter, apply color swatch
     if (field && field.colored) {
       const condStyle = getConditionStyle(v);
       lbl.style.borderLeft = '4px solid ' + condStyle.bg;
       lbl.style.paddingLeft = '10px';
       if (chk) {
-        lbl.style.background = condStyle.bg + '33'; // light tint
+        lbl.style.background = condStyle.bg + '33';
       }
-      // Color dot
       const dot = document.createElement('span');
       dot.style.cssText = 'display:inline-block;width:12px;height:12px;border-radius:50%;background:' + condStyle.bg + ';flex-shrink:0;margin-right:2px;border:1px solid rgba(0,0,0,0.15)';
       const cb = document.createElement('input');
@@ -993,7 +973,6 @@ function msSearch(fid, search) {
 }
 
 function msToggleOpt(fid, val, checked) {
-  // Guardar scroll de la página y del checklist del filtro actual
   const pageY = window.scrollY;
   const optsEl = document.getElementById('opts-' + fid);
   const optsScroll = optsEl ? optsEl.scrollTop : 0;
@@ -1004,10 +983,8 @@ function msToggleOpt(fid, val, checked) {
   const field = FILTER_FIELDS.find(f => f.id === fid);
   msUpdateLabel(fid, field.label);
 
-  // Aplicar filtros preservando scroll y sin re-renderizar el dropdown activo
   applyFilters({ keepWindowScroll: true, skipRefreshFor: fid });
 
-  // Mantener dropdown abierto + restaurar scroll interno + foco
   requestAnimationFrame(() => {
     window.scrollTo({ top: pageY, behavior: 'auto' });
 
@@ -1124,16 +1101,13 @@ function renderTable() {
   const rows = show.map(r => {
     const idx = allData.indexOf(r);
 
-    // Inventario
     const inv = parseFloat(r[C.INV]) || 0;
     const invCls = inv > 10 ? 'ok' : inv > 0 ? 'low' : 'none';
 
-    // Color de fila por condición (si aplica)
     const condRaw = r[C.CONDICION];
     let rowStyle = '';
     if (hasCondition(condRaw)) {
       const c = getConditionStyle(condRaw);
-      // Tinte de fondo (~20% opacidad) + barra lateral sólida del color
       rowStyle = 'background:' + c.bg + '33; border-left-color:' + c.bg + ';';
     }
 
@@ -1244,7 +1218,6 @@ function showDetail(idx) {
   panel.classList.add('visible');
   panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
-  // Load image async if online
   if (fileId && navigator.onLine) {
     const imgEl = document.getElementById('detail-img');
     if (imgEl) loadImage(fileId, imgEl);
@@ -1274,10 +1247,8 @@ function openModal(imgEl) {
   const modal = document.getElementById('img-modal');
   const src = imgEl.src;
   document.getElementById('img-modal-src').src = src;
-  // Set download button
   const dlBtn = document.getElementById('img-download-btn');
   dlBtn.href = src;
-  // Try to get a filename from the current detail reference
   const titleEl = document.getElementById('detail-title');
   const fname = (titleEl ? titleEl.textContent.trim().replace(/[^a-zA-Z0-9_-]/g,'_') : 'producto') + '.jpg';
   dlBtn.setAttribute('download', fname);
@@ -1319,6 +1290,17 @@ window.addEventListener('scroll', () => {
   const btn = document.getElementById('go-top-btn');
   if (window.scrollY > 300) btn.classList.add('visible');
   else btn.classList.remove('visible');
+});
+
+// ── REGISTRO DE BÚSQUEDAS CON DEBOUNCE ─────────────────────────────────────
+var _searchTimer = null;
+document.getElementById('search-input').addEventListener('input', function() {
+  applyFilters();
+  clearTimeout(_searchTimer);
+  var val = this.value;
+  _searchTimer = setTimeout(function() {
+    logSearchQuery(val);
+  }, 1000);
 });
 </script>
 <!-- iOS INSTALL BANNER -->
