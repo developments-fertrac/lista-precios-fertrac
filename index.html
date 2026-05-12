@@ -622,6 +622,30 @@ window.onload = function() { checkAuth(); };
 
 const APPS_SCRIPT_URL = 'https://script.google.com/a/macros/fertrac.com/s/AKfycbztitt85lzEy2Bl7iecjX-IS56DHY1OOxPVlPbyvwxWZpDofLQsdh-stXxBvE_xIW3L/exec';
 const ACCESS_KEY = 'fertrac2024';
+// Agrega esta línea junto a las otras variables globales
+const LOG_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzREONy5Avg7lQMSaOyUwcmEzoVAAyLsPRT1dBNr7dyX3l7_AnwCDVIjMVnZimuuNXy/exec';
+
+// ========== REGISTRO DE BÚSQUEDAS ==========
+function logSearchQuery(query) {
+  // No registrar búsquedas vacías o muy cortas
+  if (!query || query.trim().length < 2) return;
+  
+  // Evitar registros duplicados muy seguidos (mínimo 2 segundos entre registros)
+  var now = Date.now();
+  if (window._lastLogTime && (now - window._lastLogTime) < 2000) return;
+  window._lastLogTime = now;
+  
+  // Enviar en segundo plano (no bloquea la búsqueda)
+  var url = LOG_SCRIPT_URL 
+    + '?key=' + ACCESS_KEY 
+    + '&email=' + encodeURIComponent(userEmail || 'sin-sesion')
+    + '&q=' + encodeURIComponent(query.trim());
+  
+  fetch(url).catch(function(err) {
+    console.log('Error registrando búsqueda:', err);
+  });
+}
+
 
 const C = {
   REF: 0, FOTO: 1, ALTERNOS: 2, PRODUCTO: 3, CATEGORIA: 4,
