@@ -704,8 +704,23 @@ function hasCondition(rawCondition) {
 
 // ── SERVICE WORKER ─────────────────────────────────────────────────────────
 if ('serviceWorker' in navigator) {
+  if (navigator.serviceWorker.controller) {
+    let _recargando = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (_recargando) return;
+      _recargando = true;
+      window.location.reload();
+    });
+  }
+
   navigator.serviceWorker.register('/lista-precios-fertrac/sw.js', { scope: '/lista-precios-fertrac/' })
-    .then(() => console.log('SW registrado correctamente'))
+    .then(reg => {
+      console.log('SW registrado correctamente');
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') reg.update();
+      });
+      setInterval(() => reg.update(), 30 * 60 * 1000);
+    })
     .catch(err => console.log('SW error:', err));
 }
 
