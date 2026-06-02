@@ -1302,6 +1302,69 @@ document.getElementById('search-input').addEventListener('input', function() {
     logSearchQuery(val);
   }, 1000);
 });
+// ════════════════════════════════════════════════════════════════════════
+// AUTO-REFRESH SILENCIOSO — actualiza datos sin que el asesor recargue
+// ════════════════════════════════════════════════════════════════════════
+const AUTO_REFRESH_MS = 10 * 60 * 1000; // cada 10 minutos (ajustable)
+
+function dataHash(data) {
+  let h = 0;
+  const s = JSON.stringify(data);
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
+  return h + ':' + s.length;
+}
+
+async function autoRefresh() {
+  if (!navigator.onLine) return;                       // sin conexión → no hacer nada
+  if (document.visibilityState !== 'visible') return;  // app en segundo plano → no gastar cuota
+  if (!allData || allData.length === 0) return;        // aún no hay datos base
+
+  try {
+    const res = await fetch(APPS_SCRIPT_URL + '?key=' + ACCESS_KEY);
+    const json = await res.json();
+    if (json.error) return;
+
+    const fresh = json.data.slice(1).map(row =>
+      row.map(cell => cell === null || cell === undefined ? '' : String(cell).trim())
+    );
+
+    // Solo actualizar si REALMENTE cambió algo
+    if (dataHash(fresh) === dataHash(allData)) return;
+
+    allData = fresh;
+    saveData(allData);
+
+    const status = document.getElementById('sync-status');
+    if (status) status.textContent = '✅ Actualizado: ' + localStorage.getItem('fertrac_updated');
+
+    // Repintar la tabla (sin interrumpir si hay un filtro desplegado abierto)
+    const dropdownOpen = document.querySelector('.ms-dropdown.open');
+    if (!dropdownOpen) {
+      const pageY = window.scrollY;
+      buildFilters();
+      applyFilters({ keepWindowScroll: true });
+      requestAnimationFrame(() => window.scrollTo({ top: pageY, behavior: 'auto' }));
+    }
+
+    // Si hay un detalle abierto, repintarlo con el precio nuevo (sin saltar el scroll)
+    const panel = document.getElementById('detail-panel');
+    if (panel && panel.classList.contains('visible')) {
+      const openRef = (document.getElementById('detail-title').textContent || '').trim().toUpperCase();
+      const newIdx = allData.findIndex(r => String(r[C.REF] || '').trim().toUpperCase() === openRef);
+      if (newIdx >= 0) showDetail(newIdx, true);   // true = no mover el scroll
+    }
+  } catch (e) {
+    console.log('Auto-refresh falló (se conservan los datos previos):', e);
+  }
+}
+
+// Refresco periódico de respaldo
+setInterval(autoRefresh, AUTO_REFRESH_MS);
+
+// Refresco al volver a primer plano (clave para el precio al cotizar)
+document.addEventListener('visibilitychange', function () {
+  if (document.visibilityState === 'visible') autoRefresh();
+});
 </script>
 <!-- iOS INSTALL BANNER -->
 <div id="ios-install-banner">
