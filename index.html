@@ -778,7 +778,7 @@ async function syncData() {
 
     saveData(allData);
     const ts = localStorage.getItem('fertrac_updated');
-    status.textContent = '✅ ' + allData.length + ' productos';
+    status.textContent = '✅ Actualizado: ' + ts;
     btn.textContent = '🔄 Sincronizar';
     btn.disabled = false;
     buildFilters();
