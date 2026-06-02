@@ -1151,7 +1151,7 @@ async function loadImage(fileId, imgElement) {
   }
 }
 
-function showDetail(idx) {
+function showDetail(idx, keepScroll = false) {
   const r = allData[idx];
   if (!r) return;
 
@@ -1216,7 +1216,7 @@ function showDetail(idx) {
 
   const panel = document.getElementById('detail-panel');
   panel.classList.add('visible');
-  panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  if (!keepScroll) panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
   if (fileId && navigator.onLine) {
     const imgEl = document.getElementById('detail-img');
