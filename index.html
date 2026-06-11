@@ -1427,7 +1427,7 @@ function showDetail(idx, keepScroll = false) {
           '<div class="price-cards">' +
             pcard('Precio Bruto', r[C.PRECIO_BRUTO], '') +
             pcardClass('Neto -5%', r[C.NETO_5], 'neto5') +
-            (r[C.PRECIO_PROMO] ? pcard('🔥 Precio Promo', r[C.PRECIO_PROMO], true) : pcardClass('Neto -8%', r[C.NETO_8], 'neto8')) +
+            (r[C.PRECIO_PROMO] ? '<div class="price-card promo"><label>🔥 Precio Promo</label><div class="amount" style="font-size:0.78rem;white-space:normal;line-height:1.3;">' + r[C.PRECIO_PROMO] + '</div></div>' : pcardClass('Neto -8%', r[C.NETO_8], 'neto8')) +
             (r[C.PRECIO_PROMO] ? pcardClass('Neto -8%', r[C.NETO_8], 'neto8') : '') +
           '</div>' +
         '</div>' +
