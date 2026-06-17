@@ -1,4 +1,4 @@
-const CACHE = 'fertrac-v7';
+const CACHE = 'fertrac-v8';
 
 self.addEventListener('install', e => {
   e.waitUntil(
