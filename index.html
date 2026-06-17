@@ -1031,11 +1031,33 @@ async function syncData() {
 }
 
 // ── FILTERS ────────────────────────────────────────────────────────────────
+const SIN_CLASIF = 'Sin clasificar';
 const FILTER_FIELDS = [
   { id: 'f-linea',        col: C.LINEA,        label: 'Línea' },
   { id: 'f-marca',        col: C.MARCA,        label: 'Marca' },
+  { id: 'f-categoria',    col: C.CATEGORIA,    label: 'Categoría',        clasif: true },
+  { id: 'f-subcategoria', col: C.SUBCATEGORIA, label: 'Subcategoría',     clasif: true },
+  { id: 'f-tipo',         col: C.TIPO,         label: 'Tipo de producto', clasif: true },
   { id: 'f-condicion',    col: C.CONDICION,    label: 'Condición', colored: true },
 ];
+
+// En campos de clasificación, '0' o vacío se muestra/filtra como "Sin clasificar".
+function fval(raw, field) {
+  if (field && field.clasif) {
+    const s = String(raw || '').trim();
+    return (!s || s === '0') ? SIN_CLASIF : s;
+  }
+  return raw;
+}
+
+// Valores distintos de un campo (independientes de los otros filtros). "Sin clasificar" al final.
+function fieldValues(field, rows) {
+  const arr = [...new Set(rows.map(r => fval(r[field.col], field)).filter(Boolean))];
+  const i = arr.indexOf(SIN_CLASIF);
+  if (i >= 0) { arr.splice(i, 1); arr.sort(); arr.push(SIN_CLASIF); }
+  else arr.sort();
+  return arr;
+}
 
 const SEL = {};
 FILTER_FIELDS.forEach(f => { SEL[f.id] = new Set(); });
@@ -1121,17 +1143,14 @@ function msRefresh(skipFid = null) {
   if (allData.length === 0) return;
   const q = document.getElementById('search-input').value.toLowerCase();
 
-  FILTER_FIELDS.forEach(target => {
-    const subset = allData.filter(r => {
-      if (q && !(r[C.REF]+' '+r[C.PRODUCTO]+' '+r[C.MARCA]+' '+r[C.ALTERNOS]).toLowerCase().includes(q)) return false;
-      for (const f of FILTER_FIELDS) {
-        if (f.id === target.id) continue;
-        if (SEL[f.id].size > 0 && !SEL[f.id].has(r[f.col])) return false;
-      }
-      return true;
-    });
+  // Filtros INDEPENDIENTES: cada filtro muestra todas sus opciones del dataset
+  // (acotado solo por el buscador de arriba), sin depender de los otros filtros.
+  const base = q
+    ? allData.filter(r => (r[C.REF]+' '+r[C.PRODUCTO]+' '+r[C.MARCA]+' '+r[C.ALTERNOS]).toLowerCase().includes(q))
+    : allData;
 
-    const vals = [...new Set(subset.map(r => r[target.col]).filter(Boolean))].sort();
+  FILTER_FIELDS.forEach(target => {
+    const vals = fieldValues(target, base);
 
     const searchEl = document.querySelector('#dd-' + target.id + ' .ms-search');
     const currentSearch = searchEl ? searchEl.value : '';
@@ -1196,15 +1215,10 @@ function msRenderOpts(fid, vals, search) {
 function msSearch(fid, search) {
   const field = FILTER_FIELDS.find(f => f.id === fid);
   const q = document.getElementById('search-input').value.toLowerCase();
-  const subset = allData.filter(r => {
-    if (q && !(r[C.REF]+' '+r[C.PRODUCTO]+' '+r[C.MARCA]+' '+r[C.ALTERNOS]).toLowerCase().includes(q)) return false;
-    for (const f of FILTER_FIELDS) {
-      if (f.id === fid) continue;
-      if (SEL[f.id].size > 0 && !SEL[f.id].has(r[f.col])) return false;
-    }
-    return true;
-  });
-  const vals = [...new Set(subset.map(r => r[field.col]).filter(Boolean))].sort();
+  const base = q
+    ? allData.filter(r => (r[C.REF]+' '+r[C.PRODUCTO]+' '+r[C.MARCA]+' '+r[C.ALTERNOS]).toLowerCase().includes(q))
+    : allData;
+  const vals = fieldValues(field, base);
   msRenderOpts(fid, vals, search);
 }
 
@@ -1298,7 +1312,7 @@ function applyFilters(options = {}) {
   filtered = allData.filter(r => {
     if (q && !(r[C.REF]+' '+r[C.PRODUCTO]+' '+r[C.MARCA]+' '+r[C.ALTERNOS]).toLowerCase().includes(q)) return false;
     for (const f of FILTER_FIELDS) {
-      if (SEL[f.id].size > 0 && !SEL[f.id].has(r[f.col])) return false;
+      if (SEL[f.id].size > 0 && !SEL[f.id].has(fval(r[f.col], f))) return false;
     }
     return true;
   });
