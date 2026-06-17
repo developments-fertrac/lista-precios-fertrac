@@ -1143,14 +1143,19 @@ function msRefresh(skipFid = null) {
   if (allData.length === 0) return;
   const q = document.getElementById('search-input').value.toLowerCase();
 
-  // Filtros INDEPENDIENTES: cada filtro muestra todas sus opciones del dataset
-  // (acotado solo por el buscador de arriba), sin depender de los otros filtros.
-  const base = q
-    ? allData.filter(r => (r[C.REF]+' '+r[C.PRODUCTO]+' '+r[C.MARCA]+' '+r[C.ALTERNOS]).toLowerCase().includes(q))
-    : allData;
-
   FILTER_FIELDS.forEach(target => {
-    const vals = fieldValues(target, base);
+    // CASCADA: las opciones de cada filtro salen del subconjunto que cumple
+    // el buscador + los OTROS filtros activos.
+    const subset = allData.filter(r => {
+      if (q && !(r[C.REF]+' '+r[C.PRODUCTO]+' '+r[C.MARCA]+' '+r[C.ALTERNOS]).toLowerCase().includes(q)) return false;
+      for (const f of FILTER_FIELDS) {
+        if (f.id === target.id) continue;
+        if (SEL[f.id].size > 0 && !SEL[f.id].has(fval(r[f.col], f))) return false;
+      }
+      return true;
+    });
+
+    const vals = fieldValues(target, subset);
 
     const searchEl = document.querySelector('#dd-' + target.id + ' .ms-search');
     const currentSearch = searchEl ? searchEl.value : '';
@@ -1215,10 +1220,15 @@ function msRenderOpts(fid, vals, search) {
 function msSearch(fid, search) {
   const field = FILTER_FIELDS.find(f => f.id === fid);
   const q = document.getElementById('search-input').value.toLowerCase();
-  const base = q
-    ? allData.filter(r => (r[C.REF]+' '+r[C.PRODUCTO]+' '+r[C.MARCA]+' '+r[C.ALTERNOS]).toLowerCase().includes(q))
-    : allData;
-  const vals = fieldValues(field, base);
+  const subset = allData.filter(r => {
+    if (q && !(r[C.REF]+' '+r[C.PRODUCTO]+' '+r[C.MARCA]+' '+r[C.ALTERNOS]).toLowerCase().includes(q)) return false;
+    for (const f of FILTER_FIELDS) {
+      if (f.id === fid) continue;
+      if (SEL[f.id].size > 0 && !SEL[f.id].has(fval(r[f.col], f))) return false;
+    }
+    return true;
+  });
+  const vals = fieldValues(field, subset);
   msRenderOpts(fid, vals, search);
 }
 
