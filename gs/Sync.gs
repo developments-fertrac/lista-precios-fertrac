@@ -263,7 +263,8 @@ function ejecutarCompleta_(enviarCorreo) {
   const { MOTOR_DATA_ROW, MOTOR_COL_REF, MOTOR_TOTAL_COLS } = CONFIG;
 
   // Columnas de Hoja2 (1-based) a sincronizar desde LISTA DE PRECIOS.
-  // B (foto) e I (marca) se conservan y NUNCA se sobrescriben.
+  // B (foto) e I (marca) NUNCA se tocan: la foto la gestiona el proceso
+  // de fotos (poblarFotosBaseMotor) y la marca la clasificación manual.
   const COLS_SYNC = [
     [2,  'alt'],       // C  - REF ALTERNAS
     [3,  'prod'],      // D  - PRODUCTO
@@ -324,8 +325,7 @@ function ejecutarCompleta_(enviarCorreo) {
         promoFin:  row[15],
         undRm:     row[17],
         undRmc:    row[18],
-        condicion: row[19],
-        foto:      String(row[1] || "").trim().toUpperCase() === "NO" ? "" : row[1]
+        condicion: row[19]
       });
     }
   });
@@ -402,7 +402,7 @@ function ejecutarCompleta_(enviarCorreo) {
     const datos = mapaLista.get(ref);
     const filaVacia = new Array(MOTOR_TOTAL_COLS).fill("");
     filaVacia[0]  = ref;
-    filaVacia[1]  = datos.foto;
+    // filaVacia[1] (B) = FOTO se deja vacía: la gestiona el proceso de fotos
     filaVacia[2]  = datos.alt;
     filaVacia[3]  = datos.prod;
     filaVacia[4]  = 0;

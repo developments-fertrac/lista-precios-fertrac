@@ -137,6 +137,20 @@
   .ms-option input[type=checkbox] { accent-color:var(--green); width:14px; height:14px; flex-shrink:0; }
   .ms-option.checked { background:var(--green-pale); color:var(--green); font-weight:600; }
   .ms-empty { padding:10px 12px; font-size:0.8rem; color:var(--subtext); text-align:center; }
+  .ms-more { padding:8px 12px; text-align:center; border-top:1px solid var(--border); }
+  .ms-more button {
+    width:100%;
+    background:var(--green-pale);
+    color:var(--green);
+    border:1px solid var(--green);
+    border-radius:6px;
+    padding:6px 14px;
+    font-size:0.78rem;
+    font-weight:700;
+    cursor:pointer;
+    transition:background 0.2s, color 0.2s;
+  }
+  .ms-more button:hover { background:var(--green); color:white; }
   .ms-footer { padding:8px 12px; border-top:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; background:#fafafa; }
   .ms-clear { font-size:0.75rem; color:var(--subtext); cursor:pointer; background:none; border:none; padding:0; }
   .ms-clear:hover { color:var(--green); }

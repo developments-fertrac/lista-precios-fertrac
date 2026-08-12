@@ -299,11 +299,18 @@ function msRefresh(skipFid = null) {
   });
 }
 
+// PAGINACIÓN: cada lista desplegada se renderiza por lotes de MS_PAGE
+// (append incremental, nunca se vuelve a construir la lista completa).
+const MS_PAGE = 50;
+
 function msRenderOpts(fid, vals, search) {
   const c = document.getElementById('opts-' + fid);
   if (!c) return;
   const scrollTop = c.scrollTop;
   const shown = search ? vals.filter(function(v){ return v.toLowerCase().includes(search.toLowerCase()); }) : vals;
+  c._shown = shown;
+  c._field = FILTER_FIELDS.find(f => f.id === fid);
+  c._count = 0;
   c.innerHTML = '';
   if (!shown.length) {
     const empty = document.createElement('div');
@@ -312,37 +319,74 @@ function msRenderOpts(fid, vals, search) {
     c.appendChild(empty);
     return;
   }
-  const field = FILTER_FIELDS.find(f => f.id === fid);
-  shown.forEach(function(v) {
-    const chk = SEL[fid].has(v);
-    const lbl = document.createElement('label');
-    lbl.className = 'ms-option' + (chk ? ' checked' : '');
-    if (field && field.colored) {
-      const condStyle = getConditionStyle(v);
-      lbl.style.borderLeft = '4px solid ' + condStyle.bg;
-      lbl.style.paddingLeft = '10px';
-      if (chk) {
-        lbl.style.background = condStyle.bg + '33';
-      }
-      const dot = document.createElement('span');
-      dot.style.cssText = 'display:inline-block;width:12px;height:12px;border-radius:50%;background:' + condStyle.bg + ';flex-shrink:0;margin-right:2px;border:1px solid rgba(0,0,0,0.15)';
-      const cb = document.createElement('input');
-      cb.type = 'checkbox';
-      cb.checked = chk;
-      cb.onchange = (function(id, val){ return function(){ msToggleOpt(id, val, this.checked); }; })(fid, v);
-      lbl.appendChild(cb);
-      lbl.appendChild(dot);
-      lbl.appendChild(document.createTextNode(' ' + v));
-    } else {
-      const cb = document.createElement('input');
-      cb.type = 'checkbox';
-      cb.checked = chk;
-      cb.onchange = (function(id, val){ return function(){ msToggleOpt(id, val, this.checked); }; })(fid, v);
-      lbl.appendChild(cb);
-      lbl.appendChild(document.createTextNode(v));
+  msAppendPage(c, fid, MS_PAGE);
+  msAppendMoreBtn(fid);
+  c.scrollTop = scrollTop;
+}
+
+function msAppendPage(c, fid, howMany) {
+  const shown = c._shown;
+  const field = c._field;
+  const from = c._count;
+  const to = Math.min(from + howMany, shown.length);
+  for (let i = from; i < to; i++) msAppendOption(c, shown[i], fid, field);
+  c._count = to;
+}
+
+function msAppendOption(c, v, fid, field) {
+  const chk = SEL[fid].has(v);
+  const lbl = document.createElement('label');
+  lbl.className = 'ms-option' + (chk ? ' checked' : '');
+  if (field && field.colored) {
+    const condStyle = getConditionStyle(v);
+    lbl.style.borderLeft = '4px solid ' + condStyle.bg;
+    lbl.style.paddingLeft = '10px';
+    if (chk) {
+      lbl.style.background = condStyle.bg + '33';
     }
-    c.appendChild(lbl);
-  });
+    const dot = document.createElement('span');
+    dot.style.cssText = 'display:inline-block;width:12px;height:12px;border-radius:50%;background:' + condStyle.bg + ';flex-shrink:0;margin-right:2px;border:1px solid rgba(0,0,0,0.15)';
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.checked = chk;
+    cb.onchange = (function(id, val){ return function(){ msToggleOpt(id, val, this.checked); }; })(fid, v);
+    lbl.appendChild(cb);
+    lbl.appendChild(dot);
+    lbl.appendChild(document.createTextNode(' ' + v));
+  } else {
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.checked = chk;
+    cb.onchange = (function(id, val){ return function(){ msToggleOpt(id, val, this.checked); }; })(fid, v);
+    lbl.appendChild(cb);
+    lbl.appendChild(document.createTextNode(v));
+  }
+  c.appendChild(lbl);
+}
+
+function msAppendMoreBtn(fid) {
+  const c = document.getElementById('opts-' + fid);
+  if (!c || !c._shown) return;
+  const remaining = c._shown.length - c._count;
+  if (remaining <= 0) return;
+  const el = document.createElement('div');
+  el.className = 'ms-more';
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.textContent = 'Mostrar más (' + Math.min(remaining, MS_PAGE) + ')';
+  btn.onclick = function(){ msLoadMore(fid); };
+  el.appendChild(btn);
+  c.appendChild(el);
+}
+
+function msLoadMore(fid) {
+  const c = document.getElementById('opts-' + fid);
+  if (!c || !c._shown) return;
+  const scrollTop = c.scrollTop;
+  const moreEl = c.querySelector('.ms-more');
+  if (moreEl) moreEl.remove();
+  msAppendPage(c, fid, MS_PAGE);
+  msAppendMoreBtn(fid);
   c.scrollTop = scrollTop;
 }
 
