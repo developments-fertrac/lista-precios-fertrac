@@ -1,10 +1,15 @@
-const CACHE = 'fertrac-v9.0.0.1';
+const CACHE = 'fertrac-v9.0.0.2';
 
 self.addEventListener('install', e => {
   e.waitUntil(
     caches.open(CACHE).then(cache => cache.addAll([
       '/lista-precios-fertrac/',
-      '/lista-precios-fertrac/index.html'
+      '/lista-precios-fertrac/index.html',
+      '/lista-precios-fertrac/css/styles.css',
+      '/lista-precios-fertrac/js/config.js',
+      '/lista-precios-fertrac/js/auth.js',
+      '/lista-precios-fertrac/js/catalog.js',
+      '/lista-precios-fertrac/manifest.json'
     ]))
   );
   self.skipWaiting();

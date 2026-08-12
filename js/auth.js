@@ -1,12 +1,8 @@
-const CLIENT_ID = '748686271759-3ebepqvfssbpn650m8pu1l6umdq093fo.apps.googleusercontent.com';
-const ALLOWED_DOMAIN = 'fertrac.com';
+// ============================================================
+// AUTH — Login con Google, token y acceso al API
+// ============================================================
+
 let userEmail = null;
-
-const APPS_SCRIPT_URL = 'https://script.google.com/a/macros/fertrac.com/s/AKfycbztitt85lzEy2Bl7iecjX-IS56DHY1OOxPVlPbyvwxWZpDofLQsdh-stXxBvE_xIW3L/exec';
-const ACCESS_KEY = 'fertrac2024';
-const ENFORCE_REVOCACION = false; // TRANSICIÓN: false = no bloquea (cae a la llave). En el CIERRE: poner true.
-const LOG_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzREONy5Avg7lQMSaOyUwcmEzoVAAyLsPRT1dBNr7dyX3l7_AnwCDVIjMVnZimuuNXy/exec';
-
 
 // Detectar si estamos dentro de la app nativa de Capacitor
 const isNativeApp = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
@@ -149,7 +145,6 @@ function cerrarSesion() {
 }
 
 window.onload = function() { checkAuth(); };
-
 
 // ════════════════════════════════════════════════════════════════════════
 // FASE 2 — AUTH: token con respaldo en la llave (token-first, key-fallback)
@@ -323,5 +318,26 @@ function renovarTokenWebGIS() {
 
     // Salvaguarda: si GIS no responde en 8 s, caer a la llave
     setTimeout(function () { done(null); }, 8000);
+  });
+}
+
+// ========== REGISTRO DE BÚSQUEDAS ==========
+function logSearchQuery(query) {
+  // No registrar búsquedas vacías o muy cortas
+  if (!query || query.trim().length < 2) return;
+
+  // Evitar registros duplicados muy seguidos (mínimo 2 segundos entre registros)
+  var now = Date.now();
+  if (window._lastLogTime && (now - window._lastLogTime) < 2000) return;
+  window._lastLogTime = now;
+
+  // Enviar en segundo plano (no bloquea la búsqueda)
+  var url = LOG_SCRIPT_URL
+    + '?key=' + ACCESS_KEY
+    + '&email=' + encodeURIComponent(userEmail || 'sin-sesion')
+    + '&q=' + encodeURIComponent(query.trim());
+
+  fetch(url).catch(function(err) {
+    console.log('Error registrando búsqueda:', err);
   });
 }

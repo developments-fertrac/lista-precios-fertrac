@@ -1,10 +1,6 @@
-const C = {
-  REF: 0, FOTO: 1, ALTERNOS: 2, PRODUCTO: 3, CATEGORIA: 4,
-  SUBCATEGORIA: 5, TIPO: 6, LINEA: 7, MARCA: 8, APLICACION: 9,
-  PRECIO_BRUTO: 10, NETO_5: 11, NETO_8: 12, PRECIO_PROMO: 13,
-  UND_ESCALA: 14, UND_MIN: 15, UND_MAX: 16, PROMO_FIN: 17,
-  INV: 18, UND_RM: 19, UND_RMC: 20, CONDICION: 21
-};
+// ============================================================
+// CATALOG — Datos, filtros, tabla, detalle y auto-refresh
+// ============================================================
 
 let allData = [];
 let filtered = [];
@@ -17,39 +13,6 @@ const CONDITION_COLOR_MAP = [
   { match: 'PROMOCION',   bg: '#9fc5e8', text: '#222222' },
   { match: 'VERDE',       bg: '#a8d18d', text: '#222222' }
 ];
-
-
-// ── FILTERS ────────────────────────────────────────────────────────────────
-const SIN_CLASIF = 'Sin clasificar';
-const FILTER_FIELDS = [
-  { id: 'f-linea',        col: C.LINEA,        label: 'Línea' },
-  { id: 'f-marca',        col: C.MARCA,        label: 'Marca' },
-  { id: 'f-categoria',    col: C.CATEGORIA,    label: 'Categoría',        clasif: true },
-  { id: 'f-subcategoria', col: C.SUBCATEGORIA, label: 'Subcategoría',     clasif: true },
-  { id: 'f-tipo',         col: C.TIPO,         label: 'Tipo de producto', clasif: true },
-  { id: 'f-condicion',    col: C.CONDICION,    label: 'Condición', colored: true },
-];
-
-// ========== REGISTRO DE BÚSQUEDAS ==========
-function logSearchQuery(query) {
-  // No registrar búsquedas vacías o muy cortas
-  if (!query || query.trim().length < 2) return;
-
-  // Evitar registros duplicados muy seguidos (mínimo 2 segundos entre registros)
-  var now = Date.now();
-  if (window._lastLogTime && (now - window._lastLogTime) < 2000) return;
-  window._lastLogTime = now;
-
-  // Enviar en segundo plano (no bloquea la búsqueda)
-  var url = LOG_SCRIPT_URL
-    + '?key=' + ACCESS_KEY
-    + '&email=' + encodeURIComponent(userEmail || 'sin-sesion')
-    + '&q=' + encodeURIComponent(query.trim());
-
-  fetch(url).catch(function(err) {
-    console.log('Error registrando búsqueda:', err);
-  });
-}
 
 function normalizeCondition(val) {
   return String(val || '')
@@ -195,6 +158,17 @@ async function syncData() {
       '<div class="empty-state">No hay datos guardados. Conéctate a internet para sincronizar.</div>';
   }
 }
+
+// ── FILTERS ────────────────────────────────────────────────────────────────
+const SIN_CLASIF = 'Sin clasificar';
+const FILTER_FIELDS = [
+  { id: 'f-linea',        col: C.LINEA,        label: 'Línea' },
+  { id: 'f-marca',        col: C.MARCA,        label: 'Marca' },
+  { id: 'f-categoria',    col: C.CATEGORIA,    label: 'Categoría',        clasif: true },
+  { id: 'f-subcategoria', col: C.SUBCATEGORIA, label: 'Subcategoría',     clasif: true },
+  { id: 'f-tipo',         col: C.TIPO,         label: 'Tipo de producto', clasif: true },
+  { id: 'f-condicion',    col: C.CONDICION,    label: 'Condición', colored: true },
+];
 
 // En campos de clasificación, '0' o vacío se muestra/filtra como "Sin clasificar".
 function fval(raw, field) {
@@ -717,7 +691,6 @@ document.getElementById('search-input').addEventListener('input', function() {
     logSearchQuery(val);
   }, 1000);
 });
-
 // ════════════════════════════════════════════════════════════════════════
 // AUTO-REFRESH SILENCIOSO — actualiza datos sin que el asesor recargue
 // ════════════════════════════════════════════════════════════════════════
