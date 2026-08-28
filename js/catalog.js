@@ -571,17 +571,23 @@ function extractDriveId(url) {
   if (match) return match[1];
   const match2 = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
   if (match2) return match2[1];
+  const match3 = url.match(/\/uc\?(?:.*&)?id=([a-zA-Z0-9_-]+)/);
+  if (match3) return match3[1];
+  // URL ya es un ID directo
+  if (/^[a-zA-Z0-9_-]{20,}$/.test(url)) return url;
   return null;
 }
 
-async function loadImage(fileId, imgElement) {
-  try {
-    // FASE 2: token-first con key-fallback (antes era un fetch directo con ?key=&img=)
-    const dataUrl = await apiRequest('img', fileId);
-    if (dataUrl && dataUrl.startsWith('data:')) imgElement.src = dataUrl;
-  } catch(e) {
-    imgElement.style.display = 'none';
-  }
+// Devuelve una URL directa de contenido de Google Drive que el navegador
+// puede cargar en paralelo sin pasar por el script (mucho más rápido que base64).
+function driveDirectUrl(fileId) {
+  return 'https://drive.google.com/uc?export=view&id=' + encodeURIComponent(fileId);
+}
+
+function loadImage(fileId, imgElement) {
+  // Carga directa desde Drive (paralela y sin pasar por el backend).
+  imgElement.src = driveDirectUrl(fileId);
+  imgElement.onerror = function() { imgElement.style.display = 'none'; };
 }
 
 function showDetail(idx, keepScroll = false) {
