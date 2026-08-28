@@ -5,7 +5,7 @@
 const CLIENT_ID = '748686271759-3ebepqvfssbpn650m8pu1l6umdq093fo.apps.googleusercontent.com';
 const ALLOWED_DOMAIN = 'fertrac.com';
 
-const APPS_SCRIPT_URL = 'https://script.google.com/a/macros/fertrac.com/s/AKfycbztitt85lzEy2Bl7iecjX-IS56DHY1OOxPVlPbyvwxWZpDofLQsdh-stXxBvE_xIW3L/exec';
+const APPS_SCRIPT_URL = 'https://script.google.com/a/macros/fertrac.com/s/AKfycbwccxPfzNTHEF6eHJfParY7QFxae3e2pWBL9XdlSiFSOPVgO3FpBmmFzqcTHDntC9VX/exec';
 const ACCESS_KEY = 'fertrac2024';
 const ENFORCE_REVOCACION = false; // TRANSICIÓN: false = no bloquea (cae a la llave). En el CIERRE: poner true.
 const LOG_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzREONy5Avg7lQMSaOyUwcmEzoVAAyLsPRT1dBNr7dyX3l7_AnwCDVIjMVnZimuuNXy/exec';
