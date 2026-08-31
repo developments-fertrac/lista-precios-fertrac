@@ -232,9 +232,14 @@ async function _intentoApi(qs, modo) {
     const res = await fetch(APPS_SCRIPT_URL + '?' + qs);
     if (modo === 'img') {
       const txt = await res.text();
-      if (txt.startsWith('data:')) return { ok: true, payload: txt };
-      try { const j = JSON.parse(txt); return { ok: false, code: j.error || 'error' }; }
-      catch (e) { return { ok: false, code: 'error' }; }
+      // Nuevo formato: JSON { ok, url } con el thumbnail público de Drive.
+      try {
+        const j = JSON.parse(txt);
+        if (!j.ok) return { ok: false, code: j.error || 'error' };
+        return { ok: true, payload: { kind: j.kind, url: j.url || '' } };
+      } catch (e) { /* no es JSON → formato viejo, verificar data: */ }
+      if (txt.startsWith('data:')) return { ok: true, payload: { kind: 'data', url: txt } };
+      return { ok: false, code: 'error' };
     } else {
       const json = await res.json();
       if (json.error) return { ok: false, code: json.error };
