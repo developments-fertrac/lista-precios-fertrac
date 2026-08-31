@@ -576,9 +576,17 @@ function extractDriveId(url) {
 
 async function loadImage(fileId, imgElement) {
   try {
-    // FASE 2: token-first con key-fallback (antes era un fetch directo con ?key=&img=)
-    const dataUrl = await apiRequest('img', fileId);
-    if (dataUrl && dataUrl.startsWith('data:')) imgElement.src = dataUrl;
+    // FASE 3: El backend devuelve { ok, kind, url } con el thumbnail público
+    // de Drive (no base64). Se usa directamente en <img src> → carga rápida
+    // sin pasar por el proxy binario de Apps Script.
+    const res = await apiRequest('img', fileId);
+    if (res && res.kind === 'thumbnail' && res.url) {
+      imgElement.src = res.url;       // thumbnail de Google, descarga directa
+    } else if (res && res.kind === 'data' && res.url && res.url.startsWith('data:')) {
+      imgElement.src = res.url;       // compat: formato viejo base64
+    } else {
+      imgElement.style.display = 'none';
+    }
   } catch(e) {
     imgElement.style.display = 'none';
   }
