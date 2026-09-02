@@ -251,9 +251,12 @@ async function _intentoApi(qs, modo) {
 }
 
 // ── Petición al API con token-first y key-fallback ──
-// Devuelve: 'data' → objeto {data}; 'img' → texto "data:..."
+// modo: 'data' (catálogo) | 'img' (imagen, requiere fileId) | 'fotos' (catálogo de fotos)
 async function apiRequest(modo, fileId) {
-  const sufijo = (modo === 'img') ? ('&img=' + encodeURIComponent(fileId)) : '';
+  let sufijo;
+  if (modo === 'img') sufijo = '&img=' + encodeURIComponent(fileId);
+  else if (modo === 'fotos') sufijo = '&fotos=1';
+  else sufijo = '';
 
   // Token disponible (si expiró localmente, intenta renovar antes de pedir)
   let token = getToken();
