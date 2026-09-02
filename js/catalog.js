@@ -87,6 +87,42 @@ function loadData() {
   catch(e) { return null; }
 }
 
+// ── CACHE DE FOTOS ─────────────────────────────────────────────────────────
+// Cache adicional independiente del catálogo: precarga en localStorage el
+// mapa {referencia → URL Drive} para mostrar fotos sin llamadas HTTP por
+// imagen. No se mezcla con la sincronización de precios (no la bloquea).
+const FOTOS_CACHE_DATA_KEY  = 'fertrac_fotos_urls';
+const FOTOS_CACHE_EXP_KEY   = 'fertrac_fotos_expiry';
+const FOTOS_CACHE_TTL_MS    = 60 * 60 * 1000;   // 1 hora vigencia del mapa
+
+function saveFotosCache(fotosMap) {
+  try {
+    localStorage.setItem(FOTOS_CACHE_DATA_KEY, JSON.stringify(fotosMap));
+    localStorage.setItem(FOTOS_CACHE_EXP_KEY, String(Date.now() + FOTOS_CACHE_TTL_MS));
+  } catch(e) { console.warn('Storage full (fotos)', e); }
+}
+
+function loadFotosCache() {
+  try {
+    const exp = parseInt(localStorage.getItem(FOTOS_CACHE_EXP_KEY) || '0', 10);
+    if (Date.now() > exp) return null;                       // expirado
+    const data = localStorage.getItem(FOTOS_CACHE_DATA_KEY);
+    return data ? JSON.parse(data) : null;
+  } catch(e) { return null; }
+}
+
+// Sincroniza el mapa de fotos en background. NO bloquea la carga del catálogo:
+// se lanza sin await y se ignora cualquier fallo (solo refresca el TTL).
+async function syncFotosCache() {
+  if (!navigator.onLine) return;
+  const exp = parseInt(localStorage.getItem(FOTOS_CACHE_EXP_KEY) || '0', 10);
+  if (Date.now() < exp) return;                              // aún vigente → no llamar API
+  try {
+    const res = await apiRequest('fotos');
+    if (res && res.ok && res.fotos) saveFotosCache(res.fotos);
+  } catch(e) { console.warn('Cache de fotos no actualizado:', e); }
+}
+
 // ── INIT ───────────────────────────────────────────────────────────────────
 function initApp() {
   const saved = loadData();
@@ -103,6 +139,7 @@ function initApp() {
 
   if (navigator.onLine) {
     syncData();
+    syncFotosCache();   // en background, no bloquea la sincronización
   } else {
     showOfflineBanner();
   }
@@ -110,6 +147,7 @@ function initApp() {
   window.addEventListener('online', () => {
     document.getElementById('offline-banner').classList.remove('visible');
     syncData();
+    syncFotosCache();
   });
   window.addEventListener('offline', () => showOfflineBanner());
 };
@@ -574,7 +612,18 @@ function extractDriveId(url) {
   return null;
 }
 
-async function loadImage(fileId, imgElement) {
+async function loadImage(fileId, imgElement, referencia) {
+  // Fase 4: si tenemos el mapa de fotos cacheado, resolver la URL de Drive
+  // localmente y usarla directo → evita una llamada HTTP a la API por imagen.
+  const fotosCache = loadFotosCache();
+  if (fotosCache && referencia) {
+    const driveUrl = fotosCache[String(referencia).trim().toUpperCase()];
+    if (driveUrl && imgElement) {
+      imgElement.src = driveUrl;
+      return;
+    }
+  }
+
   try {
     // FASE 3: El backend devuelve { ok, kind, url } con el thumbnail público
     // de Drive (no base64). Se usa directamente en <img src> → carga rápida
@@ -661,7 +710,7 @@ function showDetail(idx, keepScroll = false) {
 
   if (fileId && navigator.onLine) {
     const imgEl = document.getElementById('detail-img');
-    if (imgEl) loadImage(fileId, imgEl);
+    if (imgEl) loadImage(fileId, imgEl, r[C.REF]);
   }
 }
 
