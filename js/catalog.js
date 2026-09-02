@@ -615,11 +615,18 @@ function extractDriveId(url) {
 async function loadImage(fileId, imgElement, referencia) {
   // Fase 4: si tenemos el mapa de fotos cacheado, resolver la URL de Drive
   // localmente y usarla directo → evita una llamada HTTP a la API por imagen.
+  // IMPORTANTE: siempre derivar el thumbnail (sz=w800) del ID, no usar la URL
+  // completa de Drive (view), que es mucho más lenta de cargar.
   const fotosCache = loadFotosCache();
   if (fotosCache && referencia) {
     const driveUrl = fotosCache[String(referencia).trim().toUpperCase()];
     if (driveUrl && imgElement) {
-      imgElement.src = driveUrl;
+      const cachedId = extractDriveId(driveUrl);
+      if (cachedId) {
+        imgElement.src = 'https://drive.google.com/thumbnail?id=' + encodeURIComponent(cachedId) + '&sz=w800';
+      } else {
+        imgElement.src = driveUrl;
+      }
       return;
     }
   }
