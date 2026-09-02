@@ -95,19 +95,36 @@ const FOTOS_CACHE_DATA_KEY  = 'fertrac_fotos_urls';
 const FOTOS_CACHE_EXP_KEY   = 'fertrac_fotos_expiry';
 const FOTOS_CACHE_TTL_MS    = 60 * 60 * 1000;   // 1 hora vigencia del mapa
 
+// Mapa en memoria: evita re-leer/re-parsear el JSON grande de localStorage
+// en cada carga de imagen (es el mayor gasto absorbido por el cache).
+let _fotosCacheMem = null;
+let _fotosCacheExp  = 0;
+
 function saveFotosCache(fotosMap) {
+  _fotosCacheMem = fotosMap;
+  _fotosCacheExp = Date.now() + FOTOS_CACHE_TTL_MS;
   try {
     localStorage.setItem(FOTOS_CACHE_DATA_KEY, JSON.stringify(fotosMap));
-    localStorage.setItem(FOTOS_CACHE_EXP_KEY, String(Date.now() + FOTOS_CACHE_TTL_MS));
+    localStorage.setItem(FOTOS_CACHE_EXP_KEY, String(_fotosCacheExp));
   } catch(e) { console.warn('Storage full (fotos)', e); }
 }
 
+function invalidateFotosCache() {
+  _fotosCacheMem = null;
+  _fotosCacheExp = 0;
+  try { localStorage.removeItem(FOTOS_CACHE_DATA_KEY); localStorage.removeItem(FOTOS_CACHE_EXP_KEY); } catch(e) {}
+}
+
 function loadFotosCache() {
+  if (_fotosCacheMem && Date.now() < _fotosCacheExp) return _fotosCacheMem;   // cache en memoria vigente
   try {
     const exp = parseInt(localStorage.getItem(FOTOS_CACHE_EXP_KEY) || '0', 10);
     if (Date.now() > exp) return null;                       // expirado
     const data = localStorage.getItem(FOTOS_CACHE_DATA_KEY);
-    return data ? JSON.parse(data) : null;
+    if (!data) return null;
+    _fotosCacheMem = JSON.parse(data);                       // poblar memoria para próximas llamadas
+    _fotosCacheExp = exp;
+    return _fotosCacheMem;
   } catch(e) { return null; }
 }
 
@@ -116,7 +133,11 @@ function loadFotosCache() {
 async function syncFotosCache() {
   if (!navigator.onLine) return;
   const exp = parseInt(localStorage.getItem(FOTOS_CACHE_EXP_KEY) || '0', 10);
-  if (Date.now() < exp) return;                              // aún vigente → no llamar API
+  // Si el cache visible sigue vigente (memoria o storage) no volver a llamar a la API.
+  if (Date.now() < exp) {
+    loadFotosCache();                                        // poblar memoria desde storage
+    return;
+  }
   try {
     const res = await apiRequest('fotos');
     if (res && res.ok && res.fotos) saveFotosCache(res.fotos);
@@ -664,7 +685,7 @@ function showDetail(idx, keepScroll = false) {
 
   const fileId = extractDriveId(r[C.FOTO]);
   const imgHtml = fileId
-    ? '<img id="detail-img" class="product-image" alt="Foto producto" onclick="openModal(this)" style="cursor:zoom-in">'
+    ? '<img id="detail-img" class="product-image" alt="Foto producto" onclick="openModal(this)" style="cursor:zoom-in" fetchpriority="high">'
     : '<div class="no-image">Sin imagen</div>';
 
   document.getElementById('detail-title').textContent = r[C.REF] || 'Detalle';
