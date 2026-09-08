@@ -227,7 +227,24 @@
     object-fit: contain;
   }
   @media (max-width: 600px) {
-    .detail-header-logo { height: 34px; }
+    /* En móvil el título del producto puede ocupar ~50% del banner, así que
+       el centrado absoluto queda tapado por el texto. Caso especial:
+       se limita el ancho del título (con "...") y el logo vuelve al flujo
+       normal del flex, ubicándose en el espacio libre entre el título y
+       el botón de cerrar, sin superponerse nunca. */
+    .detail-header h2 {
+      max-width: 48%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .detail-header-logo {
+      position: static;
+      transform: none;
+      height: 30px;
+      margin: 0 8px;
+      flex-shrink: 0;
+    }
   }
   /* FIN: Logo Fertrac en el banner de detalle */
   .close-btn {
