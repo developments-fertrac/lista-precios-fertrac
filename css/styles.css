@@ -215,6 +215,19 @@
     justify-content: space-between;
   }
   .detail-header h2 { font-size: 1rem; }
+  .detail-header-logo {
+    height: 34px;
+    width: auto;
+    object-fit: contain;
+    background: white;
+    border-radius: 8px;
+    padding: 4px 12px;
+    margin: 0 12px;
+    flex-shrink: 0;
+  }
+  @media (max-width: 600px) {
+    .detail-header-logo { height: 26px; padding: 3px 8px; margin: 0 8px; }
+  }
   .close-btn {
     background: rgba(255,255,255,0.2);
     border: none;
