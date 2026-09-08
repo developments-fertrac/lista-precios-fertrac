@@ -66,9 +66,11 @@
 <div id="app-content">
 <header>
   <div style="display:flex;align-items:center;gap:14px">
+    <!-- INICIO: Logo Fertrac en el banner de detalle-->
     <img src="https://raw.githubusercontent.com/developments-fertrac/lista-precios-fertrac/main/logo.png"
          alt="Fertrac" style="height:40px;object-fit:contain"
          onerror="this.style.display='none'">
+    <!-- FIN: Logo Fertrac en el banner de detalle -->
     <span class="header-title">Lista de Precios</span>
   </div>
   <div style="display:flex;align-items:center;gap:10px">
@@ -111,6 +113,9 @@
   <div class="detail-panel" id="detail-panel">
     <div class="detail-header">
       <h2 id="detail-title">Detalle del producto</h2>
+      <img src="https://raw.githubusercontent.com/developments-fertrac/lista-precios-fertrac/main/logo.png"
+           alt="Fertrac" class="detail-header-logo"
+           onerror="this.style.display='none'">
       <button class="close-btn" onclick="closeDetail()">✕</button>
     </div>
     <div class="detail-body" id="detail-body"></div>
