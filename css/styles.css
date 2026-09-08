@@ -225,12 +225,9 @@
     height: 46px;
     width: auto;
     object-fit: contain;
-    background: white;
-    border-radius: 10px;
-    padding: 5px 16px;
   }
   @media (max-width: 600px) {
-    .detail-header-logo { height: 34px; padding: 4px 10px; }
+    .detail-header-logo { height: 34px; }
   }
   /* FIN: Logo Fertrac en el banner de detalle */
   .close-btn {
