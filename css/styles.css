@@ -213,21 +213,24 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
+    position: relative;
   }
   .detail-header h2 { font-size: 1rem; }
   /* INICIO: Logo Fertrac en el banner de detalle*/
   .detail-header-logo {
-    height: 34px;
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    height: 46px;
     width: auto;
     object-fit: contain;
     background: white;
-    border-radius: 8px;
-    padding: 4px 12px;
-    margin: 0 12px;
-    flex-shrink: 0;
+    border-radius: 10px;
+    padding: 5px 16px;
   }
   @media (max-width: 600px) {
-    .detail-header-logo { height: 26px; padding: 3px 8px; margin: 0 8px; }
+    .detail-header-logo { height: 34px; padding: 4px 10px; }
   }
   /* FIN: Logo Fertrac en el banner de detalle */
   .close-btn {
