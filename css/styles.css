@@ -215,6 +215,7 @@
     justify-content: space-between;
   }
   .detail-header h2 { font-size: 1rem; }
+  /* INICIO: Logo Fertrac en el banner de detalle*/
   .detail-header-logo {
     height: 34px;
     width: auto;
@@ -228,6 +229,7 @@
   @media (max-width: 600px) {
     .detail-header-logo { height: 26px; padding: 3px 8px; margin: 0 8px; }
   }
+  /* FIN: Logo Fertrac en el banner de detalle */
   .close-btn {
     background: rgba(255,255,255,0.2);
     border: none;
