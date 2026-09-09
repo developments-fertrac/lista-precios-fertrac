@@ -274,7 +274,7 @@
   /* INICIO: Logo Fertrac junto a "Producto" (thead) y "Precios" (h3) (agregado por Claude) */
   .th-logo,
   .h3-logo {
-    height: 20px;
+    height: 38px;
     width: auto;
     object-fit: contain;
     vertical-align: middle;
