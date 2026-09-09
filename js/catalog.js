@@ -615,7 +615,9 @@ function renderTable() {
     '<table><thead><tr>' +
       '<th>Referencia</th>' +
       '<th>Marca</th>' +
-      '<th>Producto</th>' +
+      /* INICIO: Logo Fertrac junto a "Producto" */
+      '<th>Producto <img src="https://raw.githubusercontent.com/developments-fertrac/lista-precios-fertrac/main/logo2.png" alt="Fertrac" class="th-logo" onerror="this.style.display=\'none\'"></th>' +
+      /* FIN: Logo Fertrac junto a "Producto" */
       '<th style="text-align:center">Inv.</th>' +
       '<th style="text-align:right">Precio Bruto</th>' +
     '</tr></thead>' +
@@ -705,7 +707,9 @@ function showDetail(idx, keepScroll = false) {
       '</div>' +
       '<div>' +
         '<div class="detail-section">' +
-          '<h3>💰 Precios</h3>' +
+          /* INICIO: Logo Fertrac junto a "Precios" */
+          '<h3>💰 Precios <img src="https://raw.githubusercontent.com/developments-fertrac/lista-precios-fertrac/main/logo3.png" alt="Fertrac" class="h3-logo" onerror="this.style.display=\'none\'"></h3>' +
+          /* FIN: Logo Fertrac junto a "Precios" */
           '<div class="price-cards">' +
             pcard('Precio Bruto', r[C.PRECIO_BRUTO], '') +
             pcardClass('Neto -5%', r[C.NETO_5], 'neto5') +

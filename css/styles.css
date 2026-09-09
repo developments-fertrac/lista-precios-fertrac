@@ -213,38 +213,33 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    position: relative;
+    gap: 10px;
   }
-  .detail-header h2 { font-size: 1rem; }
-  /* INICIO: Logo Fertrac en el banner de detalle*/
+  /* INICIO: Logo Fertrac en el banner de detalle */
+  /* El logo va pegado al título (no centrado en todo el banner), para que
+     nunca quede montado sobre el texto en pantallas angostas. */
+  .detail-title-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+  .detail-header h2 {
+    font-size: 1rem;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
   .detail-header-logo {
-    position: absolute;
-    left: 50%;
-    top: 50%;
-    transform: translate(-50%, -50%);
-    height: 46px;
+    height: 32px;
     width: auto;
     object-fit: contain;
+    flex-shrink: 0;
   }
   @media (max-width: 600px) {
-    /* En móvil el título del producto puede ocupar ~50% del banner, así que
-       el centrado absoluto queda tapado por el texto. Caso especial:
-       se limita el ancho del título (con "...") y el logo vuelve al flujo
-       normal del flex, ubicándose en el espacio libre entre el título y
-       el botón de cerrar, sin superponerse nunca. */
-    .detail-header h2 {
-      max-width: 48%;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-    .detail-header-logo {
-      position: static;
-      transform: none;
-      height: 30px;
-      margin: 0 8px;
-      flex-shrink: 0;
-    }
+    .detail-header-logo { height: 24px; }
   }
   /* FIN: Logo Fertrac en el banner de detalle */
   .close-btn {
@@ -276,6 +271,16 @@
     border-bottom: 2px solid var(--green-pale);
     padding-bottom: 4px;
   }
+  /* INICIO: Logo Fertrac junto a "Producto" (thead) y "Precios" (h3) (agregado por Claude) */
+  .th-logo,
+  .h3-logo {
+    height: 20px;
+    width: auto;
+    object-fit: contain;
+    vertical-align: middle;
+    margin-left: 8px;
+  }
+  /* FIN: Logo Fertrac junto a "Producto" y "Precios" */
   .detail-row { margin-bottom: 8px; }
   .detail-row label { font-size: 0.75rem; color: var(--subtext); display: block; }
   .detail-row span { font-size: 0.9rem; font-weight: 600; }
