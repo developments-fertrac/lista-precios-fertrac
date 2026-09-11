@@ -4,8 +4,8 @@
 
 let userEmail = null;
 
-// Detectar si estamos dentro de la app nativa de Capacitor
-const isNativeApp = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
+// FASE 1: detección de plataforma centralizada (App.Platform singleton)
+const isNativeApp = window.App.Platform.isNativeApp;
 
 async function loginWithGoogle() {
   document.getElementById('login-loading').style.display = 'block';
@@ -44,6 +44,7 @@ async function loginWithGoogle() {
           setToken(result.authentication.accessToken, result.authentication.expires_in);
         }
         pingMigracion();   // FASE 2: avisa (una vez) que este dispositivo quedó configurado
+        App.Session.recordLogin(userEmailResult);
         showApp();
       } else {
         document.getElementById('login-loading').style.display = 'none';
@@ -90,6 +91,7 @@ function handleOAuthCallback() {
         userEmail = email;
         localStorage.setItem('fertrac_user', email);
         pingMigracion();   // FASE 2: avisa (una vez) que este dispositivo quedó configurado
+        App.Session.recordLogin(email);
         window.location.hash = '';
         showApp();
       } else {
@@ -138,6 +140,7 @@ async function bootstrapToken() {
 
 // FASE 2: cerrar sesión (para re-loguear y capturar token). Conserva el catálogo en caché.
 function cerrarSesion() {
+  App.Store.notify('session.end', { email: userEmail, platform: App.Platform.label });
   clearToken();
   localStorage.removeItem('fertrac_user');
   userEmail = null;
@@ -215,7 +218,7 @@ function manejarNoAutorizado() {
   clearToken();
   localStorage.removeItem('fertrac_user');
   userEmail = null;
-  allData = [];
+  App.Store.clear();                        // FASE 1: el Store es la única fuente de verdad
   document.getElementById('app-content').style.display = 'none';
   document.getElementById('login-screen').style.display = 'flex';
   const ad = document.getElementById('access-denied');

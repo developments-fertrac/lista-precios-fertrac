@@ -1,8 +1,11 @@
 // ============================================================
 // CATALOG — Datos, filtros, tabla, detalle y auto-refresh
+// FASE 1 (MVC + Observer): el Modelo vive en App.Store. Esta
+// capa es el controlador + vistas (tabla/detalle/filtros) que
+// se suscriben a los eventos del Store.
 // ============================================================
 
-let allData = [];
+const Store = window.App.Store;
 let filtered = [];
 
 // ── MAPEO DE COLORES PARA CONDICIÓN ───────────────────────────────────────
@@ -139,20 +142,20 @@ async function syncFotosCache() {
     return;
   }
   try {
-    const res = await apiRequest('fotos');
+    const res = await App.ApiClient.getFotos();
     if (res && res.ok && res.fotos) saveFotosCache(res.fotos);
   } catch(e) { console.warn('Cache de fotos no actualizado:', e); }
 }
 
 // ── INIT ───────────────────────────────────────────────────────────────────
 function initApp() {
+  App.Session.start();   // FASE 1: rastreo de actividad (login/heartbeat)
+
   const saved = loadData();
   if (saved && saved.length > 0) {
-    allData = saved;
+    Store.setCatalog(saved);   // emite 'catalog.replaced' → vistas se (re)pintan solas
     const ts = localStorage.getItem('fertrac_updated');
     document.getElementById('sync-status').textContent = ts ? 'Última sincronización: ' + ts : '';
-    buildFilters();
-    applyFilters();
   } else {
     document.getElementById('table-wrapper').innerHTML =
       '<div class="empty-state">Conéctate a internet para cargar los datos por primera vez</div>';
@@ -187,32 +190,32 @@ async function syncData() {
   btn.textContent = '🔄 Cargando...';
   btn.disabled = true;
 
-  if (allData.length === 0) {
+  if (Store.count === 0) {
     document.getElementById('table-wrapper').innerHTML =
       '<div class="loading"><div class="spinner"></div>Cargando datos...</div>';
   }
 
   try {
     // FASE 2: token-first con key-fallback (antes era un fetch directo con ?key=)
-    const json = await apiRequest('data');
+    const json = await App.ApiClient.getData();
 
-    allData = json.data.slice(1).map(row =>
+    const fresh = json.data.slice(1).map(row =>
       row.map(cell => cell === null || cell === undefined ? '' : String(cell).trim())
     );
 
-    saveData(allData);
+    // FASE 1: el Store emite 'catalog.replaced' y las vistas se (re)pintan.
+    Store.setCatalog(fresh, { forceFull: true });
+    saveData(fresh);
     const ts = localStorage.getItem('fertrac_updated');
     status.textContent = '✅ Actualizado: ' + ts;
     btn.textContent = '🔄 Sincronizar';
     btn.disabled = false;
-    buildFilters();
-    applyFilters();
   } catch(e) {
     status.textContent = '⚠️ Error al sincronizar';
     btn.textContent = '🔄 Sincronizar';
     btn.disabled = false;
     const saved = loadData();
-    if (saved && saved.length > 0) { allData = saved; buildFilters(); applyFilters(); }
+    if (saved && saved.length > 0) Store.setCatalog(saved);
     else document.getElementById('table-wrapper').innerHTML =
       '<div class="empty-state">No hay datos guardados. Conéctate a internet para sincronizar.</div>';
   }
@@ -328,13 +331,13 @@ function buildFilters() {
 }
 
 function msRefresh(skipFid = null) {
-  if (allData.length === 0) return;
+  if (Store.count === 0) return;
   const q = document.getElementById('search-input').value.toLowerCase();
 
   FILTER_FIELDS.forEach(target => {
     // CASCADA: las opciones de cada filtro salen del subconjunto que cumple
     // el buscador + los OTROS filtros activos.
-    const subset = allData.filter(r => {
+    const subset = Store.rows.filter(r => {
       if (q && !(r[C.REF]+' '+r[C.PRODUCTO]+' '+r[C.MARCA]+' '+r[C.ALTERNOS]).toLowerCase().includes(q)) return false;
       for (const f of FILTER_FIELDS) {
         if (f.id === target.id) continue;
@@ -452,7 +455,7 @@ function msLoadMore(fid) {
 function msSearch(fid, search) {
   const field = FILTER_FIELDS.find(f => f.id === fid);
   const q = document.getElementById('search-input').value.toLowerCase();
-  const subset = allData.filter(r => {
+  const subset = Store.rows.filter(r => {
     if (q && !(r[C.REF]+' '+r[C.PRODUCTO]+' '+r[C.MARCA]+' '+r[C.ALTERNOS]).toLowerCase().includes(q)) return false;
     for (const f of FILTER_FIELDS) {
       if (f.id === fid) continue;
@@ -551,7 +554,7 @@ function applyFilters(options = {}) {
   const savedWindowY = keepWindowScroll ? window.scrollY : null;
 
   const q = document.getElementById('search-input').value.toLowerCase();
-  filtered = allData.filter(r => {
+  filtered = Store.rows.filter(r => {
     if (q && !(r[C.REF]+' '+r[C.PRODUCTO]+' '+r[C.MARCA]+' '+r[C.ALTERNOS]).toLowerCase().includes(q)) return false;
     for (const f of FILTER_FIELDS) {
       if (SEL[f.id].size > 0 && !SEL[f.id].has(fval(r[f.col], f))) return false;
@@ -562,8 +565,8 @@ function applyFilters(options = {}) {
   renderTable();
 
   document.getElementById('results-meta').innerHTML =
-    allData.length > 0
-      ? 'Mostrando <strong>' + filtered.length + '</strong> de <strong>' + allData.length + '</strong> productos'
+    Store.count > 0
+      ? 'Mostrando <strong>' + filtered.length + '</strong> de <strong>' + Store.count + '</strong> productos'
       : '';
 
   msRefresh(skipRefreshFor);
@@ -583,6 +586,46 @@ function clearAll() {
 }
 
 // ── TABLE ──────────────────────────────────────────────────────────────────
+// FASE 1: la tabla usa `data-ref` (clave estable) y delegación de clics
+// (ya no depende de índices que se rompen con actualizaciones parciales).
+
+function nRefUp(v) { return String(v === null || v === undefined ? '' : v).trim().toUpperCase(); }
+
+const TableView = {
+  cellsHTML(r) {
+    const inv = parseFloat(r[C.INV]) || 0;
+    const invCls = inv > 10 ? 'ok' : inv > 0 ? 'low' : 'none';
+    return '<td class="td-ref">' + (r[C.REF]||'—') + '</td>' +
+      '<td class="td-marca"><span class="tag">' + (r[C.MARCA]||'—') + '</span></td>' +
+      '<td class="td-producto">' + (r[C.PRODUCTO]||'—') + '</td>' +
+      '<td class="td-inv"><span class="inv-pill ' + invCls + '">' + inv + '</span></td>' +
+      '<td class="td-precio">' + formatPrice(r[C.PRECIO_BRUTO]) + '</td>';
+  },
+  rowStyle(r) {
+    const condRaw = r[C.CONDICION];
+    if (!hasCondition(condRaw)) return '';
+    const c = getConditionStyle(condRaw);
+    return 'background:' + c.bg + '33; border-left-color:' + c.bg + ';';
+  },
+  // Actualiza en sitio SOLO las filas cuyo ref cambió (Observer granular).
+  patch(refs) {
+    const tbody = document.querySelector('#table-wrapper tbody');
+    if (!tbody) return;
+    for (let i = 0; i < tbody.rows.length; i++) {
+      const tr = tbody.rows[i];
+      const ref = tr.getAttribute('data-ref');
+      if (ref && refs.indexOf(ref) >= 0) {
+        const r = Store.getRow(ref);
+        if (r) { tr.style.cssText = this.rowStyle(r); tr.innerHTML = this.cellsHTML(r); }
+      }
+    }
+    const meta = document.getElementById('results-meta');
+    if (meta) meta.innerHTML = Store.count > 0
+      ? 'Mostrando <strong>' + filtered.length + '</strong> de <strong>' + Store.count + '</strong> productos'
+      : '';
+  }
+};
+
 function renderTable() {
   const wrapper = document.getElementById('table-wrapper');
   if (filtered.length === 0) {
@@ -591,39 +634,32 @@ function renderTable() {
   }
   const show = filtered.slice(0, 200);
   const rows = show.map(r => {
-    const idx = allData.indexOf(r);
-
-    const inv = parseFloat(r[C.INV]) || 0;
-    const invCls = inv > 10 ? 'ok' : inv > 0 ? 'low' : 'none';
-
-    const condRaw = r[C.CONDICION];
-    let rowStyle = '';
-    if (hasCondition(condRaw)) {
-      const c = getConditionStyle(condRaw);
-      rowStyle = 'background:' + c.bg + '33; border-left-color:' + c.bg + ';';
-    }
-
-    return '<tr onclick="showDetail(' + idx + ')" data-idx="' + idx + '" style="' + rowStyle + '">' +
-      '<td class="td-ref">' + (r[C.REF]||'—') + '</td>' +
-      '<td class="td-marca"><span class="tag">' + (r[C.MARCA]||'—') + '</span></td>' +
-      '<td class="td-producto">' + (r[C.PRODUCTO]||'—') + '</td>' +
-      '<td class="td-inv"><span class="inv-pill ' + invCls + '">' + inv + '</span></td>' +
-      '<td class="td-precio">' + formatPrice(r[C.PRECIO_BRUTO]) + '</td>' +
+    const ref = nRefUp(r[C.REF]);
+    return '<tr data-ref="' + ref + '" style="' + TableView.rowStyle(r) + '">' +
+      TableView.cellsHTML(r) +
       '</tr>';
   }).join('');
   wrapper.innerHTML =
     '<table><thead><tr>' +
       '<th>Referencia</th>' +
       '<th>Marca</th>' +
-      /* INICIO: Logo Fertrac junto a "Producto" */
       '<th>Producto <img src="https://raw.githubusercontent.com/developments-fertrac/lista-precios-fertrac/main/logo2.png" alt="Fertrac" class="th-logo" onerror="this.style.display=\'none\'"></th>' +
-      /* FIN: Logo Fertrac junto a "Producto" */
       '<th style="text-align:center">Inv.</th>' +
       '<th style="text-align:right">Precio Bruto</th>' +
     '</tr></thead>' +
     '<tbody>' + rows + '</tbody></table>' +
     (filtered.length > 200 ? '<div style="text-align:center;padding:10px;font-size:0.8rem;color:#888">Mostrando 200 de ' + filtered.length + ' resultados. Refina tu búsqueda.</div>' : '');
 }
+
+// Delegación de clics: fila → showDetail(ref) sin depender de índices.
+(function () {
+  const wrapper = document.getElementById('table-wrapper');
+  if (!wrapper) return;
+  wrapper.addEventListener('click', function (e) {
+    const tr = e.target && e.target.closest ? e.target.closest('tr[data-ref]') : null;
+    if (tr) showDetail(tr.getAttribute('data-ref'));
+  });
+})();
 
 // ── DETAIL ─────────────────────────────────────────────────────────────────
 function extractDriveId(url) {
@@ -658,7 +694,7 @@ async function loadImage(fileId, imgElement, referencia) {
     // FASE 3: El backend devuelve { ok, kind, url } con el thumbnail público
     // de Drive (no base64). Se usa directamente en <img src> → carga rápida
     // sin pasar por el proxy binario de Apps Script.
-    const res = await apiRequest('img', fileId);
+    const res = await App.ApiClient.getImg(fileId);
     if (res && res.kind === 'thumbnail' && res.url) {
       imgElement.src = res.url;       // thumbnail de Google, descarga directa
     } else if (res && res.kind === 'data' && res.url && res.url.startsWith('data:')) {
@@ -671,13 +707,96 @@ async function loadImage(fileId, imgElement, referencia) {
   }
 }
 
-function showDetail(idx, keepScroll = false) {
-  const r = allData[idx];
-  if (!r) return;
+// FASE 1: el detalle es una vista Observable; sync() actualiza PRECIOS/INV
+// en sitio sin recargar la imagen ni saltar el scroll.
+const DetailView = {
+  openRef: null,
+  _foto: null,
+  open(ref, r) {
+    this.openRef = ref;
+    this._foto = r[C.FOTO];
+  },
+  sync(refs) {
+    if (!this.openRef || refs.indexOf(this.openRef) < 0) return;
+    const r = Store.getRow(this.openRef);
+    if (!r) { closeDetail(); return; }
+    const body = document.getElementById('detail-body');
+    if (!body) return;
 
-  document.querySelectorAll('tbody tr').forEach(tr => tr.classList.remove('selected'));
-  const tr = document.querySelector('tr[data-idx="' + idx + '"]');
-  if (tr) tr.classList.add('selected');
+    const cards = body.querySelector('.price-cards');
+    if (cards) {
+      cards.innerHTML =
+        pcard('Precio Bruto', r[C.PRECIO_BRUTO], '') +
+        pcardClass('Neto -5%', r[C.NETO_5], 'neto5') +
+        (r[C.PRECIO_PROMO]
+          ? '<div class="price-card promo"><label>🔥 Precio Promo</label><div class="amount" style="font-size:0.78rem;white-space:normal;line-height:1.3;">' + r[C.PRECIO_PROMO] + '</div></div>'
+          : pcardClass('Neto -8%', r[C.NETO_8], 'neto8')) +
+        (r[C.PRECIO_PROMO] ? pcardClass('Neto -8%', r[C.NETO_8], 'neto8') : '');
+    }
+
+    const cond = getConditionStyle(r[C.CONDICION]);
+    const condCard = body.querySelector('.info-card.condicion');
+    if (condCard) {
+      condCard.style.background = cond.bg;
+      const lbl = condCard.querySelector('label');
+      if (lbl) lbl.style.color = cond.labelColor;
+      const val = condCard.querySelector('.value');
+      if (val) { val.style.color = cond.textColor; val.textContent = cond.text; }
+    }
+
+    const inv = parseFloat(r[C.INV]) || 0;
+    const invBg = inv > 10 ? '#d4edda' : inv > 0 ? '#fff3cd' : '#f8d7da';
+    const invFg = inv > 10 ? '#155724' : inv > 0 ? '#856404' : '#721c24';
+    const invText = inv > 10 ? inv + ' unidades' : inv > 0 ? inv + ' unidades (bajo)' : 'Sin stock';
+    const invCards = body.querySelectorAll('.info-card');
+    for (let i = 0; i < invCards.length; i++) {
+      const c = invCards[i];
+      if (c.classList.contains('condicion')) continue;
+      const lbl = c.querySelector('label');
+      if (!lbl || lbl.textContent !== 'Inventario') continue;
+      c.style.background = invBg;
+      const val = c.querySelector('.value');
+      if (val) { val.style.color = invFg; val.textContent = invText; }
+    }
+
+    const rows = body.querySelectorAll('.detail-row');
+    const map = {
+      'Unid. mín. de venta': r[C.UND_MIN],
+      'Unid. máx. de venta': r[C.UND_MAX],
+      'Escala (≥ unidades)': r[C.UND_ESCALA],
+      'Und. RM': r[C.UND_RM],
+      'Und. RMC': r[C.UND_RMC],
+      'Promo finaliza en': r[C.PROMO_FIN]
+    };
+    for (let i = 0; i < rows.length; i++) {
+      const lbl = rows[i].querySelector('label');
+      const span = rows[i].querySelector('span');
+      if (!lbl || !span || !(lbl.textContent in map)) continue;
+      span.textContent = map[lbl.textContent] || '—';
+      span.style.color = lbl.textContent === 'Promo finaliza en' ? '#e65100' : '';
+    }
+
+    // La URL de la foto cambió → recargar SOLO la imagen (el resto ya está fresco).
+    if (this._foto !== r[C.FOTO]) {
+      this._foto = r[C.FOTO];
+      const fileId = extractDriveId(r[C.FOTO]);
+      const imgEl = document.getElementById('detail-img');
+      if (fileId && navigator.onLine && imgEl) loadImage(fileId, imgEl, r[C.REF]);
+    }
+  }
+};
+
+function showDetail(ref, keepScroll = false) {
+  const refKey = nRefUp(ref);
+  const r = Store.getRow(refKey);
+  if (!r) return;
+  DetailView.open(refKey, r);
+
+  document.querySelectorAll('#table-wrapper tbody tr').forEach(tr => tr.classList.remove('selected'));
+  const trs = document.querySelectorAll('#table-wrapper tbody tr');
+  for (let i = 0; i < trs.length; i++) {
+    if (trs[i].getAttribute('data-ref') === refKey) { trs[i].classList.add('selected'); break; }
+  }
 
   const inv = parseFloat(r[C.INV]) || 0;
   const invClass = inv > 10 ? 'inv-ok' : inv > 0 ? 'inv-low' : 'inv-none';
@@ -707,9 +826,7 @@ function showDetail(idx, keepScroll = false) {
       '</div>' +
       '<div>' +
         '<div class="detail-section">' +
-          /* INICIO: Logo Fertrac junto a "Precios" */
           '<h3>💰 Precios <img src="https://raw.githubusercontent.com/developments-fertrac/lista-precios-fertrac/main/logo3.png" alt="Fertrac" class="h3-logo" onerror="this.style.display=\'none\'"></h3>' +
-          /* FIN: Logo Fertrac junto a "Precios" */
           '<div class="price-cards">' +
             pcard('Precio Bruto', r[C.PRECIO_BRUTO], '') +
             pcardClass('Neto -5%', r[C.NETO_5], 'neto5') +
@@ -839,41 +956,27 @@ function dataHash(data) {
 async function autoRefresh() {
   if (!navigator.onLine) return;                       // sin conexión → no hacer nada
   if (document.visibilityState !== 'visible') return;  // app en segundo plano → no gastar cuota
-  if (!allData || allData.length === 0) return;        // aún no hay datos base
+  if (Store.count === 0) return;                       // aún no hay datos base
 
   try {
     // FASE 2: token-first con key-fallback (antes era un fetch directo con ?key=)
-    const json = await apiRequest('data');
+    const json = await App.ApiClient.getData();
 
     const fresh = json.data.slice(1).map(row =>
       row.map(cell => cell === null || cell === undefined ? '' : String(cell).trim())
     );
 
     // Solo actualizar si REALMENTE cambió algo
-    if (dataHash(fresh) === dataHash(allData)) return;
+    if (dataHash(fresh) === dataHash(Store.rows)) return;
 
-    allData = fresh;
-    saveData(allData);
+    // FASE 1: el Store compara contra lo actual y emite eventos GRANULARES:
+    //   'product.changed' (precio/stock/foto) → patch de filas + detalle en sitio
+    //   'product.removed'                    → re-render completo
+    Store.setCatalog(fresh);
+    saveData(fresh);
 
     const status = document.getElementById('sync-status');
     if (status) status.textContent = '✅ Actualizado: ' + localStorage.getItem('fertrac_updated');
-
-    // Repintar la tabla (sin interrumpir si hay un filtro desplegado abierto)
-    const dropdownOpen = document.querySelector('.ms-dropdown.open');
-    if (!dropdownOpen) {
-      const pageY = window.scrollY;
-      buildFilters();
-      applyFilters({ keepWindowScroll: true });
-      requestAnimationFrame(() => window.scrollTo({ top: pageY, behavior: 'auto' }));
-    }
-
-    // Si hay un detalle abierto, repintarlo con el precio nuevo (sin saltar el scroll)
-    const panel = document.getElementById('detail-panel');
-    if (panel && panel.classList.contains('visible')) {
-      const openRef = (document.getElementById('detail-title').textContent || '').trim().toUpperCase();
-      const newIdx = allData.findIndex(r => String(r[C.REF] || '').trim().toUpperCase() === openRef);
-      if (newIdx >= 0) showDetail(newIdx, true);   // true = no mover el scroll
-    }
   } catch (e) {
     console.log('Auto-refresh falló (se conservan los datos previos):', e);
   }
@@ -885,4 +988,38 @@ setInterval(autoRefresh, AUTO_REFRESH_MS);
 // Refresco al volver a primer plano (clave para el precio al cotizar)
 document.addEventListener('visibilitychange', function () {
   if (document.visibilityState === 'visible') autoRefresh();
+});
+
+// ════════════════════════════════════════════════════════════════════════
+// FASE 1 — MVC: las vistas se suscriben al Store (Observer)
+// El controlador (sync/autoRefresh) solo toca el Modelo; las vistas
+// reaccionan a los eventos. La tabla actualiza por fila, no por re-render.
+// ════════════════════════════════════════════════════════════════════════
+Store.subscribe('catalog.replaced', function () {
+  buildFilters();
+  applyFilters();
+});
+
+Store.subscribe('product.changed', function (payload) {
+  const dropdownOpen = document.querySelector('.ms-dropdown.open');
+  if (payload.added && payload.added.length && !dropdownOpen) {
+    applyFilters();               // alta de productos → re-render estructural
+  } else {
+    TableView.patch(payload.refs);      // solo las filas modificadas
+    DetailView.sync(payload.refs);      // solo el detalle si está abierto y afectado
+  }
+});
+
+Store.subscribe('product.removed', function (payload) {
+  if (DetailView.openRef && payload.refs.indexOf(DetailView.openRef) >= 0) closeDetail();
+  if (!document.querySelector('.ms-dropdown.open')) applyFilters();
+  else TableView.patch(payload.refs);
+});
+
+// Rastreo de actividad (Fase 3 lo enviará al backend).
+Store.subscribe('user.inactive', function () {
+  console.log('[sesión] Usuario marcado como inactivo (5 min sin actividad)');
+});
+Store.subscribe('session.end', function (p) {
+  console.log('[sesión] Finalizada:', p && p.email);
 });

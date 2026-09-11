@@ -1,4 +1,4 @@
-const CACHE = 'fertrac-v9.0.0.4';
+const CACHE = 'fertrac-v10.0.0';
 
 self.addEventListener('install', e => {
   e.waitUntil(
@@ -7,6 +7,11 @@ self.addEventListener('install', e => {
       '/lista-precios-fertrac/index.html',
       '/lista-precios-fertrac/css/styles.css',
       '/lista-precios-fertrac/js/config.js',
+      '/lista-precios-fertrac/js/core/store.js',
+      '/lista-precios-fertrac/js/core/platform.js',
+      '/lista-precios-fertrac/js/core/queue.js',
+      '/lista-precios-fertrac/js/core/api.js',
+      '/lista-precios-fertrac/js/core/session.js',
       '/lista-precios-fertrac/js/auth.js',
       '/lista-precios-fertrac/js/catalog.js',
       '/lista-precios-fertrac/manifest.json'
