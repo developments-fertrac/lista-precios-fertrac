@@ -1,0 +1,44 @@
+{
+  "gs/appsscript.json": {
+    "mtime": 1786568985.2307985,
+    "seen": 1789151609.062762,
+    "ast_hash": "939201e43799ba87c153d8a9e6df0596",
+    "semantic_hash": "939201e43799ba87c153d8a9e6df0596"
+  },
+  "js/auth.js": {
+    "mtime": 1788384265.5524082,
+    "seen": 1789151609.0627658,
+    "ast_hash": "170d155a465708790c287260eb03b016",
+    "semantic_hash": "170d155a465708790c287260eb03b016"
+  },
+  "js/catalog.js": {
+    "mtime": 1788386003.444317,
+    "seen": 1789151609.0627673,
+    "ast_hash": "b01f7458d3ae41b5284fc8326c644b1a",
+    "semantic_hash": "b01f7458d3ae41b5284fc8326c644b1a"
+  },
+  "js/config.js": {
+    "mtime": 1786571720.1486814,
+    "seen": 1789151609.0627685,
+    "ast_hash": "bc3ea78b0a57e50e48883e410405874d",
+    "semantic_hash": "bc3ea78b0a57e50e48883e410405874d"
+  },
+  "manifest.json": {
+    "mtime": 1786572814.6268017,
+    "seen": 1789151609.0627694,
+    "ast_hash": "4d3ef3fc8c2f3e2a770b4feae882c181",
+    "semantic_hash": "4d3ef3fc8c2f3e2a770b4feae882c181"
+  },
+  "sw.js": {
+    "mtime": 1788186347.1133068,
+    "seen": 1789151609.0627701,
+    "ast_hash": "8a2707effc3d5ab361140655b54532f4",
+    "semantic_hash": "8a2707effc3d5ab361140655b54532f4"
+  },
+  "index.html": {
+    "mtime": 1786572809.5528407,
+    "seen": 1789151609.062771,
+    "ast_hash": "fa24ee1a7876aa33e86dd01d6867a36b",
+    "semantic_hash": "fa24ee1a7876aa33e86dd01d6867a36b"
+  }
+}

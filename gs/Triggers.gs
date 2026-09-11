@@ -2,14 +2,8 @@
 // TRIGGERS — Instalación, eliminación y manejo de disparadores
 // ============================================================
 
-// ── onEdit sobre LISTA DE PRECIOS: detecta la actualización del archivo
-//    CONFIG.ID_LISTA_PRECIOS y solo entonces ejecuta sincronizacionCompleta() ──
+// ── onEdit sobre LISTA DE PRECIOS: ejecuta sincronizacionCompleta() ──
 function onListaPreciosEdit(e) {
-  const idEditado = (e && e.source && e.source.getId) ? e.source.getId() : "";
-  if (idEditado !== CONFIG.ID_LISTA_PRECIOS) {
-    console.log("⏭️ Edición en otro archivo — ignorando");
-    return;
-  }
   console.log("📄 LISTA DE PRECIOS actualizada — ejecutando sincronizacionCompleta()");
   sincronizacionCompleta(true);
 }
@@ -19,12 +13,18 @@ function instalarTriggers() {
     .filter(t =>
       t.getHandlerFunction() === "sincronizarListaABaseMotor" ||
       t.getHandlerFunction() === "sincronizacionCompleta" ||
-      t.getHandlerFunction() === "sincronizacionNocturnaFotos" ||
+      t.getHandlerFunction() === "reconstruirFotosCache" ||
+      t.getHandlerFunction() === "sincronizarNuevasReferencias" ||
       t.getHandlerFunction() === "onListaPreciosEdit")
     .forEach(t => ScriptApp.deleteTrigger(t));
 
   ScriptApp.newTrigger("sincronizarListaABaseMotor")
     .timeBased().everyMinutes(5).create();
+
+  // Fotos nuevas: corre de a NUEVAS_BLOQUE (280) por ejecución con cursor en
+  // CacheService; cada trigger avanza al siguiente bloque sin timeout.
+  ScriptApp.newTrigger("sincronizarNuevasReferencias")
+    .timeBased().everyMinutes(10).create();
 
   // La sincronización completa ya no corre por reloj: solo cuando se edite LISTA DE PRECIOS
   ScriptApp.newTrigger("onListaPreciosEdit")
@@ -32,11 +32,12 @@ function instalarTriggers() {
     .onEdit()
     .create();
 
-  ScriptApp.newTrigger("sincronizacionNocturnaFotos")
+  // Fotos: reconstrucción nocturna del caché =IMAGE(URL) en SHEET_CACHE
+  ScriptApp.newTrigger("reconstruirFotosCache")
     .timeBased().everyDays(1).atHour(23)
     .nearMinute(30).create();
 
-  console.log("🚀 Triggers instalados — cada 5 min + onEdit LISTA DE PRECIOS (sync completa) + 11:30pm fotos");
+  console.log("🚀 Triggers instalados — cada 5 min + onEdit LISTA DE PRECIOS (sync completa) + fotos nocturnas");
 }
 
 function eliminarTriggers() {
@@ -44,9 +45,11 @@ function eliminarTriggers() {
     .filter(t =>
       t.getHandlerFunction() === "sincronizarListaABaseMotor" ||
       t.getHandlerFunction() === "sincronizacionCompleta" ||
-      t.getHandlerFunction() === "sincronizacionNocturnaFotos" ||
-      t.getHandlerFunction() === "onListaPreciosEdit" ||
-      t.getHandlerFunction() === "poblarFotosBaseMotor")
+      t.getHandlerFunction() === "reconstruirFotosCache" ||
+      t.getHandlerFunction() === "sincronizarFotosCache" ||
+      t.getHandlerFunction() === "sincronizarNuevasReferencias" ||
+      t.getHandlerFunction() === "onListaPreciosEditFotos" ||
+      t.getHandlerFunction() === "onListaPreciosEdit")
     .forEach(t => ScriptApp.deleteTrigger(t));
   console.log("🛑 Todos los triggers eliminados");
 }
@@ -66,6 +69,7 @@ function pausarTriggersTemporalmente() {
   ScriptApp.getProjectTriggers()
     .filter(t => t.getHandlerFunction() === "sincronizarListaABaseMotor" ||
                  t.getHandlerFunction() === "sincronizacionCompleta" ||
+                 t.getHandlerFunction() === "sincronizarNuevasReferencias" ||
                  t.getHandlerFunction() === "onListaPreciosEdit")
     .forEach(t => ScriptApp.deleteTrigger(t));
   console.log("⏸ Triggers pausados temporalmente");

@@ -87,6 +87,63 @@ function loadData() {
   catch(e) { return null; }
 }
 
+// ── CACHE DE FOTOS ─────────────────────────────────────────────────────────
+// Cache adicional independiente del catálogo: precarga en localStorage el
+// mapa {referencia → URL Drive} para mostrar fotos sin llamadas HTTP por
+// imagen. No se mezcla con la sincronización de precios (no la bloquea).
+const FOTOS_CACHE_DATA_KEY  = 'fertrac_fotos_urls';
+const FOTOS_CACHE_EXP_KEY   = 'fertrac_fotos_expiry';
+const FOTOS_CACHE_TTL_MS    = 60 * 60 * 1000;   // 1 hora vigencia del mapa
+
+// Mapa en memoria: evita re-leer/re-parsear el JSON grande de localStorage
+// en cada carga de imagen (es el mayor gasto absorbido por el cache).
+let _fotosCacheMem = null;
+let _fotosCacheExp  = 0;
+
+function saveFotosCache(fotosMap) {
+  _fotosCacheMem = fotosMap;
+  _fotosCacheExp = Date.now() + FOTOS_CACHE_TTL_MS;
+  try {
+    localStorage.setItem(FOTOS_CACHE_DATA_KEY, JSON.stringify(fotosMap));
+    localStorage.setItem(FOTOS_CACHE_EXP_KEY, String(_fotosCacheExp));
+  } catch(e) { console.warn('Storage full (fotos)', e); }
+}
+
+function invalidateFotosCache() {
+  _fotosCacheMem = null;
+  _fotosCacheExp = 0;
+  try { localStorage.removeItem(FOTOS_CACHE_DATA_KEY); localStorage.removeItem(FOTOS_CACHE_EXP_KEY); } catch(e) {}
+}
+
+function loadFotosCache() {
+  if (_fotosCacheMem && Date.now() < _fotosCacheExp) return _fotosCacheMem;   // cache en memoria vigente
+  try {
+    const exp = parseInt(localStorage.getItem(FOTOS_CACHE_EXP_KEY) || '0', 10);
+    if (Date.now() > exp) return null;                       // expirado
+    const data = localStorage.getItem(FOTOS_CACHE_DATA_KEY);
+    if (!data) return null;
+    _fotosCacheMem = JSON.parse(data);                       // poblar memoria para próximas llamadas
+    _fotosCacheExp = exp;
+    return _fotosCacheMem;
+  } catch(e) { return null; }
+}
+
+// Sincroniza el mapa de fotos en background. NO bloquea la carga del catálogo:
+// se lanza sin await y se ignora cualquier fallo (solo refresca el TTL).
+async function syncFotosCache() {
+  if (!navigator.onLine) return;
+  const exp = parseInt(localStorage.getItem(FOTOS_CACHE_EXP_KEY) || '0', 10);
+  // Si el cache visible sigue vigente (memoria o storage) no volver a llamar a la API.
+  if (Date.now() < exp) {
+    loadFotosCache();                                        // poblar memoria desde storage
+    return;
+  }
+  try {
+    const res = await apiRequest('fotos');
+    if (res && res.ok && res.fotos) saveFotosCache(res.fotos);
+  } catch(e) { console.warn('Cache de fotos no actualizado:', e); }
+}
+
 // ── INIT ───────────────────────────────────────────────────────────────────
 function initApp() {
   const saved = loadData();
@@ -103,6 +160,7 @@ function initApp() {
 
   if (navigator.onLine) {
     syncData();
+    syncFotosCache();   // en background, no bloquea la sincronización
   } else {
     showOfflineBanner();
   }
@@ -110,6 +168,7 @@ function initApp() {
   window.addEventListener('online', () => {
     document.getElementById('offline-banner').classList.remove('visible');
     syncData();
+    syncFotosCache();
   });
   window.addEventListener('offline', () => showOfflineBanner());
 };
@@ -574,11 +633,37 @@ function extractDriveId(url) {
   return null;
 }
 
-async function loadImage(fileId, imgElement) {
+async function loadImage(fileId, imgElement, referencia) {
+  // Fase 4: si tenemos el mapa de fotos cacheado, resolver la URL de Drive
+  // localmente y usarla directo → evita una llamada HTTP a la API por imagen.
+  // IMPORTANTE: siempre derivar el thumbnail (sz=w800) del ID, no usar la URL
+  // completa de Drive (view), que es mucho más lenta de cargar.
+  const fotosCache = loadFotosCache();
+  if (fotosCache && referencia) {
+    const driveUrl = fotosCache[String(referencia).trim().toUpperCase()];
+    if (driveUrl && imgElement) {
+      const cachedId = extractDriveId(driveUrl);
+      if (cachedId) {
+        imgElement.src = 'https://drive.google.com/thumbnail?id=' + encodeURIComponent(cachedId) + '&sz=w800';
+      } else {
+        imgElement.src = driveUrl;
+      }
+      return;
+    }
+  }
+
   try {
-    // FASE 2: token-first con key-fallback (antes era un fetch directo con ?key=&img=)
-    const dataUrl = await apiRequest('img', fileId);
-    if (dataUrl && dataUrl.startsWith('data:')) imgElement.src = dataUrl;
+    // FASE 3: El backend devuelve { ok, kind, url } con el thumbnail público
+    // de Drive (no base64). Se usa directamente en <img src> → carga rápida
+    // sin pasar por el proxy binario de Apps Script.
+    const res = await apiRequest('img', fileId);
+    if (res && res.kind === 'thumbnail' && res.url) {
+      imgElement.src = res.url;       // thumbnail de Google, descarga directa
+    } else if (res && res.kind === 'data' && res.url && res.url.startsWith('data:')) {
+      imgElement.src = res.url;       // compat: formato viejo base64
+    } else {
+      imgElement.style.display = 'none';
+    }
   } catch(e) {
     imgElement.style.display = 'none';
   }
@@ -600,7 +685,7 @@ function showDetail(idx, keepScroll = false) {
 
   const fileId = extractDriveId(r[C.FOTO]);
   const imgHtml = fileId
-    ? '<img id="detail-img" class="product-image" alt="Foto producto" onclick="openModal(this)" style="cursor:zoom-in">'
+    ? '<img id="detail-img" class="product-image" alt="Foto producto" onclick="openModal(this)" style="cursor:zoom-in" fetchpriority="high">'
     : '<div class="no-image">Sin imagen</div>';
 
   document.getElementById('detail-title').textContent = r[C.REF] || 'Detalle';
@@ -653,7 +738,7 @@ function showDetail(idx, keepScroll = false) {
 
   if (fileId && navigator.onLine) {
     const imgEl = document.getElementById('detail-img');
-    if (imgEl) loadImage(fileId, imgEl);
+    if (imgEl) loadImage(fileId, imgEl, r[C.REF]);
   }
 }
 

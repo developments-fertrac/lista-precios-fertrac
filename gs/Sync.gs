@@ -72,21 +72,6 @@ function sincronizacionCompleta(ignorarHorario) {
   }
 }
 
-// ── 11:30pm: arranca proceso de fotos ──
-function sincronizacionNocturnaFotos() {
-  PropertiesService.getScriptProperties().deleteProperty("MOTOR_NEXT_ROW");
-
-  ScriptApp.getProjectTriggers()
-    .filter(t => t.getHandlerFunction() === "poblarFotosBaseMotor")
-    .forEach(t => ScriptApp.deleteTrigger(t));
-
-  ScriptApp.newTrigger("poblarFotosBaseMotor")
-    .timeBased().everyMinutes(1).create();
-
-  console.log("🌙 Proceso nocturno de fotos iniciado");
-  poblarFotosBaseMotor();
-}
-
 // ── Funciones de prueba ──
 function probarDiurna() {
   const lock = LockService.getScriptLock();
@@ -245,6 +230,9 @@ function ejecutarDiurna_() {
   }
 
   console.log(`✅ Sync DIURNA | Filas con cambio real: ${actualizadas} | Sin cambios: ${sinCambios} | Inactivadas: ${inactivadas}`);
+
+  // La app lee Hoja2 con caché: invalidarla para que vea los precios ya.
+  try { invalidarCacheCatalogo_(); } catch (e) {}
 }
 
 // ============================================================
@@ -258,29 +246,31 @@ function ejecutarCompleta_(enviarCorreo) {
   const ssLista = SpreadsheetApp.openById(CONFIG.ID_LISTA_PRECIOS);
   const shMotor = ssMotor.getSheetByName(CONFIG.SHEET_MOTOR);
   const shLista = ssLista.getSheetByName(CONFIG.SHEET_LISTA);
-
+  const ahora = new Date()
   const { LISTA_DATA_ROW, LISTA_COL_REF, LISTA_COL_ALT, LISTA_COL_PROD, LISTA_COL_PRECIO, LISTA_COL_INV } = CONFIG;
   const { MOTOR_DATA_ROW, MOTOR_COL_REF, MOTOR_TOTAL_COLS } = CONFIG;
 
   // Columnas de Hoja2 (1-based) a sincronizar desde LISTA DE PRECIOS.
   // B (foto) e I (marca) NUNCA se tocan: la foto la gestiona el proceso
-  // de fotos (poblarFotosBaseMotor) y la marca la clasificación manual.
+  // de fotos (sincronizarFotosCache / reconstruirFotosCache) y la marca
+  // la clasificación manual.
+  // Nota: la letra de columna y el número deben coincidir (A=1 ... Z=26).
   const COLS_SYNC = [
-    [2,  'alt'],       // C  - REF ALTERNAS
-    [3,  'prod'],      // D  - PRODUCTO
-    [7,  'linea'],     // H  - LINEA
-    [10, 'precio'],    // K  - PRECIO BRUTO
-    [11, 'neto5'],     // L  - NETO -5%
-    [12, 'neto8'],     // M  - NETO -8%
-    [13, 'promo'],     // N  - PRECIO PROMO (texto literal)
-    [14, 'undEscala'], // O  - UND ESCALA
-    [15, 'undMin'],    // P  - UND MIN VTA
-    [16, 'undMax'],    // Q  - UND MAX VTA
-    [17, 'promoFin'],  // R  - PROMO FINALIZA
-    [18, 'inv'],       // S  - INV
-    [19, 'undRm'],     // T  - UND RM
-    [20, 'undRmc'],    // U  - UND RMC
-    [21, 'condicion']  // V  - CONDICION
+    [3,  'alt'],       // C  - REF ALTERNAS
+    [4,  'prod'],      // D  - PRODUCTO
+    [8,  'linea'],     // H  - LINEA
+    [11, 'precio'],    // K  - PRECIO BRUTO
+    [12, 'neto5'],     // L  - NETO -5%
+    [13, 'neto8'],     // M  - NETO -8%
+    [14, 'promo'],     // N  - PRECIO PROMO (texto literal)
+    [15, 'undEscala'], // O  - UND ESCALA
+    [16, 'undMin'],    // P  - UND MIN VTA
+    [17, 'undMax'],    // Q  - UND MAX VTA
+    [18, 'promoFin'],  // R  - PROMO FINALIZA
+    [19, 'inv'],       // S  - INV
+    [20, 'undRm'],     // T  - UND RM
+    [21, 'undRmc'],    // U  - UND RMC
+    [22, 'condicion']  // V  - CONDICION
   ];
 
   let shInactivas = ssMotor.getSheetByName(CONFIG.SHEET_INACTIVAS);
@@ -387,7 +377,11 @@ function ejecutarCompleta_(enviarCorreo) {
         cambio = true;
       }
     });
-    if (cambio) { actualizadas++; refsActualizadas.push(ref); }
+    if (cambio) {
+      actualizaciones.push({ filaReal, col: 23, valor: ahora }); // W - fecha/hora de actualización
+      actualizadas++;
+      refsActualizadas.push(ref);
+    }
   });
 
   if (actualizaciones.length > 0) {
@@ -423,6 +417,7 @@ function ejecutarCompleta_(enviarCorreo) {
     filaVacia[19] = datos.undRm || 0;
     filaVacia[20] = datos.undRmc || 0;
     filaVacia[21] = String(datos.condicion || "").trim() ? datos.condicion : "NO TIENE";
+    filaVacia[22] = ahora; // W - fecha/hora de creación
     nuevasFilas.push(filaVacia);
     refsNuevas.push(ref);
   });
@@ -434,6 +429,9 @@ function ejecutarCompleta_(enviarCorreo) {
 
   console.log(`✅ Sync COMPLETA | Actualizadas: ${actualizadas} | Nuevas: ${nuevas} | Inactivadas: ${inactivadas}`);
   if (refsActualizadas.length > 0) console.log("🔍 Referencias actualizadas:", refsActualizadas.join(", "));
+
+  // La app lee Hoja2 con caché: invalidarla para ver los cambios sin esperar TTL.
+  try { invalidarCacheCatalogo_(); } catch (e) {}
 
   // ── 7. Correo ──
   if (enviarCorreo && (actualizadas > 0 || nuevas > 0 || inactivadas > 0)) {
@@ -459,6 +457,7 @@ function ejecutarCompleta_(enviarCorreo) {
 // SYNC COMPLETA — Correr a demanda (una sola vez)
 // Hoja2 conserva su orden actual; solo aplica diferencias.
 // ============================================================
+
 
 function reordenarBaseMotor() {
   console.log("🔄 Ejecutando sync completa sobre BASE MOTOR...");

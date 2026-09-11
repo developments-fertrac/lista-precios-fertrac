@@ -39,10 +39,12 @@ const CONFIG = {
   MOTOR_TOTAL_COLS: 25,
 
   // ── Proceso de fotos ──
-  FOLDER_ID:         "1opgmr9eE_Fn7Yh04rSnno0fwErVRdb3D",
-  FOTOS_START_ROW:   2,
-  FOTOS_MAX_PER_RUN: 25,
+  FOLDER_ID:         "1V2msCWZvWPOb7xPwh6Sd3MG75A1hhlQe",
   FOTOS_MAX_MS:      240000,
+  FOTOS_CONV_WEBP:   "https://wsrv.nl/?url={URL}&output=webp&q=80",
+  FOTOS_CONV_WEBP_POST: "https://wsrv.nl/?output=webp&q=80",
+  FOTOS_MIN_KB:      10,   // tamaño mínimo del webp descargado (rechaza placeholders/4KB)
+  SHEET_BITACORA_FOTOS: "BITACORA_FOTOS",
 
   // ── Acceso / API ──
   ACCESS_KEY:        "fertrac2024",
@@ -50,4 +52,6 @@ const CONFIG = {
   // ── Correos ──
   CORREO_NOTIFICACION: "ctorres@fertrac.com",
   CORREO_DATA_SCIENCE: "data_science@fertrac.com"
+
+
 };
