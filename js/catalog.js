@@ -596,10 +596,16 @@ function clearAll() {
 
 function nRefUp(v) { return String(v === null || v === undefined ? '' : v).trim().toUpperCase(); }
 
+// Thumbnail de Drive (miniatura pública, descarga directa sin Apps Script).
+function thumbDriveURL(fileId, sz) {
+  return 'https://drive.google.com/thumbnail?id=' + encodeURIComponent(fileId) + '&sz=' + (sz || 'w200');
+}
+
 const TableView = {
-  // Fase 4: miniatura del producto en la tabla. Resuelve la URL desde el
-  // mapa de fotos cacheado (sin llamadas HTTP por fila). Sin URL conocida →
-  // placeholder silencioso.
+  // Fase 4: miniatura del producto en la tabla. Resolución en cascada:
+  //   1) mapa de fotos cacheado (?fotos=1) → URL de Drive guardada en CACHE;
+  //   2) fallback a la col B de Hoja2 (r[C.FOTO]) → misma fuente que el detalle.
+  // Sin URL conocida → placeholder silencioso. Cero llamadas HTTP al API.
   thumbHTML(r, fotos) {
     const ref = String(r[C.REF] || '').trim().toUpperCase();
     let url = '';
@@ -607,10 +613,12 @@ const TableView = {
       const dv = fotos[ref];
       if (dv) {
         const id = extractDriveId(dv);
-        url = id
-          ? 'https://drive.google.com/thumbnail?id=' + encodeURIComponent(id) + '&sz=w200'
-          : dv;
+        url = id ? thumbDriveURL(id, 'w200') : dv;
       }
+    }
+    if (!url) {
+      const id = extractDriveId(r[C.FOTO]);
+      if (id) url = thumbDriveURL(id, 'w200');
     }
     return '<td class="td-img"><div class="cell-thumb' + (url ? '' : ' empty') + '">' +
       (url
@@ -712,7 +720,7 @@ async function loadImage(fileId, imgElement, referencia) {
     if (driveUrl && imgElement) {
       const cachedId = extractDriveId(driveUrl);
       if (cachedId) {
-        imgElement.src = 'https://drive.google.com/thumbnail?id=' + encodeURIComponent(cachedId) + '&sz=w800';
+        imgElement.src = thumbDriveURL(cachedId, 'w800');
       } else {
         imgElement.src = driveUrl;
       }

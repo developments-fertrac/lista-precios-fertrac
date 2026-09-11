@@ -1,5 +1,5 @@
-const CACHE = 'fertrac-v10.3.0';
-const V = 'v=10.3.0';
+const CACHE = 'fertrac-v10.3.1';
+const V = 'v=10.3.1';
 
 // Fase 4: caché runtime de imágenes (thumbnails de Drive) — independiente del
 // precache: un bump de versión no borra las fotos ya descargadas.
