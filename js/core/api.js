@@ -77,7 +77,7 @@ window.App = window.App || {};
     if (!email) return Promise.resolve({ ok: true, queued: false });
     const platform = (window.App.Platform && App.Platform.label) || 'web';
     return Queue.enqueue('activity:' + type + ':' + email, function () {
-      const extra = { activity: type, email: email, platform: platform };
+      const extra = { activity: type, email: email, platform: platform, noRenew: true };
       return transport()('activity', null, extra)
         .then(function () { return { ok: true }; })
         .catch(function () {

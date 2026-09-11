@@ -113,6 +113,9 @@ function showApp() {
 }
 
 function checkAuth() {
+  // El iframe de renovación silenciosa carga esta página con un #access_token;
+  // ahí NO se debe arrancar la app (solo recoge el token el padre).
+  if (inIframe()) return;
   if (!isNativeApp && handleOAuthCallback()) return;
   const saved = localStorage.getItem('fertrac_user');
   if (saved && saved.endsWith('@' + ALLOWED_DOMAIN)) {
@@ -144,12 +147,6 @@ function checkAuth() {
 // FASE 2: migra en silencio a quien ya tiene sesión pero aún no tiene token.
 async function bootstrapToken() {
   if (localStorage.getItem('fertrac_token')) return;   // ya tiene token
-  if (!isNativeApp) {
-    // esperar a que cargue la librería de GIS (carga async)
-    for (let i = 0; i < 20 && !(window.google && google.accounts && google.accounts.oauth2); i++) {
-      await new Promise(r => setTimeout(r, 250));
-    }
-  }
   try {
     const nuevo = await renovarTokenSilencioso();
     if (nuevo) pingMigracion();
@@ -219,8 +216,8 @@ async function renovarTokenSilencioso() {
       }
       return null;
     } else {
-      // WEB: Google Identity Services
-      return (typeof renovarTokenWebGIS === 'function') ? await renovarTokenWebGIS() : null;
+      // WEB: renovación sin popups vía iframe oculto (no usa GIS)
+      return (typeof renovarTokenWeb === 'function') ? await renovarTokenWeb() : null;
     }
   } catch (e) {
     console.log('No se pudo renovar el token:', e);
@@ -274,14 +271,14 @@ async function _intentoApi(qs, modo) {
 
 // ── Renovación silenciosa con de-dupe ──
 // Comparte UNA renovación en curso entre todas las peticiones concurrentes
-// (evita N popups de GIS a la vez durante el arranque).
+// (evita N iframes de renovación a la vez durante el arranque).
 let _renovacionEnCurso = null;
 let _renoCooldownHasta = 0;
 const RENOVACION_COOLDOWN_MS = 5 * 60 * 1000;
 function renovarTokenProtegido() {
-  // Cooldown: si el intento anterior falló hace poco (ej. GIS no puede renovar
-  // en silencio), no volver a disparar requestAccessToken por cada heartbeat
-  // (spam de popups/COOP en consola). Cae directo a la llave.
+  // Cooldown: si el intento anterior falló hace poco (ej. sin throw, Google no
+  // puede renovar en silencio por session/cookies), no volver a dispararlo por
+  // cada heartbeat. Cae directo a la llave.
   if (Date.now() < _renoCooldownHasta) return Promise.resolve(null);
   if (!_renovacionEnCurso) {
     _renovacionEnCurso = renovarTokenSilencioso()
@@ -296,8 +293,8 @@ function renovarTokenProtegido() {
 }
 
 // ¿El token actual viene de un login de hace menos de 60 s? Evita entrar en
-// token_invalido → renovar → token_invalido con GIS (popups + ruido en la
-// consola) cuando el backend rechaza un token recién emitido.
+// token_invalido → renovar → token_invalido cuando el backend rechaza un token
+// recién emitido (el mismo visitante da el mismo veredicto en el acto).
 function tokenRecienObtenido() {
   const t = window._tokenRecienObtenido;
   return !!t && (Date.now() - t) < 60000;
@@ -308,6 +305,9 @@ function tokenRecienObtenido() {
 //       | 'activity' (eventos de sesión)
 // extra (opcional): params adicionales → 'data?delta=1&since=...', etc.
 async function apiRequest(modo, fileId, extra) {
+  // Best-effort (actividad/heartbeat): nunca disparar renovación de token
+  // en segundo plano; se usa el token vigente o se cae directo a la llave.
+  const noRenew = !!(extra && extra.noRenew);
   let sufijo;
   if (modo === 'img') sufijo = '&img=' + encodeURIComponent(fileId);
   else if (modo === 'fotos') sufijo = '&fotos=1';
@@ -324,7 +324,7 @@ async function apiRequest(modo, fileId, extra) {
 
   // Token disponible (si expiró localmente, intenta renovar antes de pedir)
   let token = getToken();
-  if (!token && localStorage.getItem('fertrac_token') && !tokenRecienObtenido()) {
+  if (!token && localStorage.getItem('fertrac_token') && !tokenRecienObtenido() && !noRenew) {
     token = await renovarTokenProtegido();
   }
 
@@ -335,7 +335,7 @@ async function apiRequest(modo, fileId, extra) {
     // Un token recién emitido (login de hace segundos) que el backend rechaza
     // no se arregla mintiendo otro en el acto: mismo cliente, mismo veredicto,
     // y el renew abriría popup/ruido en mitad del callback de login.
-    if (res.code === 'token_invalido' && !tokenRecienObtenido()) {
+    if (res.code === 'token_invalido' && !tokenRecienObtenido() && !noRenew) {
       const nuevo = await renovarTokenProtegido();
       if (nuevo) {
         res = await _intentoApi('token=' + encodeURIComponent(nuevo) + sufijo, modo);
@@ -352,47 +352,85 @@ async function apiRequest(modo, fileId, extra) {
   throw new Error(resK.code || 'error');
 }
 
-// ── Renovación silenciosa WEB con Google Identity Services ──
-let _gisTokenClient = null;
+// ============================================================
+// RENOVACIÓN SILENCIOSA WEB — iframe oculto (sin popups, sin GIS/COOP)
+// Google Identity Services (requestAccessToken) abre un popup para renovar;
+// en páginas servidas con COOP (o sin cookies de terceros) el popup no
+// entrega el token y Chrome loguea "Cross-Origin-Opener-Policy policy would
+// block the window.closed call". Google además manda COOP-Report-Only en sus
+// páginas de auth (confirmado en /o/oauth2/v2/auth), así que el aviso sale
+// incluso cuando la vista funciona.
+// Aquí se usa el MISMO flujo OAuth implícito del login dentro de un iframe
+// oculto con prompt=none: nunca abre UI ni depende del opener. El endpoint
+// /o/oauth2/v2/auth no envía X-Frame-Options:DENY, así que responde en el
+// iframe. Si Google no puede renovar en silencio, devuelve #error=... y
+// caemos a la llave (red de seguridad) sin ruido en consola.
+// ============================================================
 
-function initGIS() {
-  if (_gisTokenClient) return true;
-  if (!window.google || !google.accounts || !google.accounts.oauth2) return false;
-  _gisTokenClient = google.accounts.oauth2.initTokenClient({
-    client_id: CLIENT_ID,
-    scope: 'email profile',
-    callback: function () {},         // se reasigna en cada petición
-    error_callback: function () {}    // se reasigna en cada petición
-  });
-  return true;
+function inIframe() {
+  try { return window.self !== window.top; } catch (e) { return true; }
 }
 
-function renovarTokenWebGIS() {
+let _renovacionWebEnCurso = false;
+function renovarTokenWeb() {
   return new Promise(function (resolve) {
-    if (!initGIS()) { resolve(null); return; }
+    if (_renovacionWebEnCurso) { resolve(null); return; }
+    _renovacionWebEnCurso = true;
 
-    let resuelto = false;
-    const done = function (val) { if (!resuelto) { resuelto = true; resolve(val); } };
+    // Mismo redirect_uri que el login (el autorizado en Google Cloud Console).
+    const redirectUri = String(window.location.href.split('?')[0]).split('#')[0];
+    const url = 'https://accounts.google.com/o/oauth2/v2/auth' +
+      '?client_id=' + CLIENT_ID +
+      '&redirect_uri=' + encodeURIComponent(redirectUri) +
+      '&response_type=token' +
+      '&scope=' + encodeURIComponent('email profile') +
+      '&include_granted_scopes=true' +
+      '&prompt=none';
 
-    _gisTokenClient.callback = function (resp) {
-      if (resp && resp.access_token) {
-        setToken(resp.access_token, resp.expires_in);
-        done(resp.access_token);
-      } else {
-        done(null);
-      }
+    const iframe = document.createElement('iframe');
+    iframe.setAttribute('aria-hidden', 'true');
+    iframe.style.cssText = 'display:none;border:0;width:1px;height:1px;';
+    document.body.appendChild(iframe);
+
+    let terminado = false;
+    const fin = function (val) {
+      if (terminado) return;
+      terminado = true;
+      _renovacionWebEnCurso = false;
+      try { document.body.removeChild(iframe); } catch (e) {}
+      resolve(val);
     };
-    _gisTokenClient.error_callback = function () { done(null); };
 
-    try {
-      // prompt:'' = silencioso, sin UI, si el usuario tiene sesión de Google activa
-      _gisTokenClient.requestAccessToken({ prompt: '' });
-    } catch (e) {
-      done(null);
-    }
+    iframe.onerror = function () { fin(null); };
 
-    // Salvaguarda: si GIS no responde en 8 s, caer a la llave
-    setTimeout(function () { done(null); }, 8000);
+    // Poll del hash de la URL del iframe: #access_token → renovado;
+    // #error=... (p.ej. interaction_required) → caer a la llave.
+    const inicio = Date.now();
+    const tope = 7000;
+    const poll = setInterval(function () {
+      if (Date.now() - inicio > tope) { clearInterval(poll); fin(null); return; }
+      let href = null;
+      try {
+        const loc = iframe.contentWindow && iframe.contentWindow.location;
+        if (loc) href = String(loc.href || '');
+      } catch (e) { /* cross-origin: todavía navegando en accounts.google.com */ }
+      if (!href) return;
+      const pos = href.indexOf('#');
+      if (pos < 0) return;
+      const hash = href.substring(pos + 1);
+      if (hash.indexOf('error=') >= 0) { clearInterval(poll); fin(null); return; }
+      if (hash.indexOf('access_token=') >= 0) {
+        clearInterval(poll);
+        try {
+          const params = new URLSearchParams(hash);
+          const token = params.get('access_token');
+          if (token) { setToken(token, params.get('expires_in')); fin(token); return; }
+        } catch (e) {}
+        fin(null);
+      }
+    }, 250);
+
+    iframe.src = url;
   });
 }
 
