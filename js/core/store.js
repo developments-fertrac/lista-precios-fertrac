@@ -1,7 +1,8 @@
 // ============================================================
 // CORE — App.Store — Model + Observer (Singleton)
 // Estado único del catálogo, índice por referencia y bus de
-// eventos para las vistas (Observer). Carga `C` de config.js.
+// eventos para las vistas (Observer). `C` es un binding léxico
+// global declarado en config.js (const), accesible por nombre.
 // Eventos emitidos:
 //   'catalog.replaced'  primera carga / sincronización manual
 //   'product.changed'   { refs, added, modified } cambios silenciosos
@@ -119,4 +120,4 @@ window.App = window.App || {};
     get rev() { return state.rev; },
     get count() { return state.rows.length; }
   };
-})(window, window.C);
+})(window, C);        // C: binding léxico global de config.js (no window.C)
