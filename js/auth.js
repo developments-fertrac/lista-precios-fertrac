@@ -160,6 +160,7 @@ function setToken(token, expiresInSec) {
   localStorage.setItem('fertrac_token', token);
   const seg = parseInt(expiresInSec, 10) || 3300;        // ~55 min por defecto
   localStorage.setItem('fertrac_token_exp', String(Date.now() + seg * 1000));
+  window._tokenRecienObtenido = Date.now(); // login fresco: no re-renovar si el backend lo rechaza
 }
 function getToken() {
   const t = localStorage.getItem('fertrac_token');
@@ -253,6 +254,27 @@ async function _intentoApi(qs, modo) {
   }
 }
 
+// ── Renovación silenciosa con de-dupe ──
+// Comparte UNA renovación en curso entre todas las peticiones concurrentes
+// (evita N popups de GIS a la vez durante el arranque).
+let _renovacionEnCurso = null;
+function renovarTokenProtegido() {
+  if (!_renovacionEnCurso) {
+    _renovacionEnCurso = renovarTokenSilencioso()
+      .catch(function () { return null; })
+      .finally(function () { _renovacionEnCurso = null; });
+  }
+  return _renovacionEnCurso;
+}
+
+// ¿El token actual viene de un login de hace menos de 60 s? Evita entrar en
+// token_invalido → renovar → token_invalido con GIS (popups + ruido en la
+// consola) cuando el backend rechaza un token recién emitido.
+function tokenRecienObtenido() {
+  const t = window._tokenRecienObtenido;
+  return !!t && (Date.now() - t) < 60000;
+}
+
 // ── Petición al API con token-first y key-fallback ──
 // modo: 'data' (catálogo) | 'img' (imagen, fileId) | 'fotos' (catálogo de fotos)
 //       | 'activity' (eventos de sesión)
@@ -274,16 +296,19 @@ async function apiRequest(modo, fileId, extra) {
 
   // Token disponible (si expiró localmente, intenta renovar antes de pedir)
   let token = getToken();
-  if (!token && localStorage.getItem('fertrac_token')) {
-    token = await renovarTokenSilencioso();
+  if (!token && localStorage.getItem('fertrac_token') && !tokenRecienObtenido()) {
+    token = await renovarTokenProtegido();
   }
 
   if (token) {
     let res = await _intentoApi('token=' + encodeURIComponent(token) + sufijo, modo);
     if (res.ok) return res.payload;
     if (res.code === 'no_autorizado' && ENFORCE_REVOCACION) { manejarNoAutorizado(); throw new Error('no_autorizado'); }
-    if (res.code === 'token_invalido') {
-      const nuevo = await renovarTokenSilencioso();
+    // Un token recién emitido (login de hace segundos) que el backend rechaza
+    // no se arregla mintiendo otro en el acto: mismo cliente, mismo veredicto,
+    // y el renew abriría popup/ruido en mitad del callback de login.
+    if (res.code === 'token_invalido' && !tokenRecienObtenido()) {
+      const nuevo = await renovarTokenProtegido();
       if (nuevo) {
         res = await _intentoApi('token=' + encodeURIComponent(nuevo) + sufijo, modo);
         if (res.ok) return res.payload;
