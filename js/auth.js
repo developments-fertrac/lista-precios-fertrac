@@ -276,10 +276,20 @@ async function _intentoApi(qs, modo) {
 // Comparte UNA renovación en curso entre todas las peticiones concurrentes
 // (evita N popups de GIS a la vez durante el arranque).
 let _renovacionEnCurso = null;
+let _renoCooldownHasta = 0;
+const RENOVACION_COOLDOWN_MS = 5 * 60 * 1000;
 function renovarTokenProtegido() {
+  // Cooldown: si el intento anterior falló hace poco (ej. GIS no puede renovar
+  // en silencio), no volver a disparar requestAccessToken por cada heartbeat
+  // (spam de popups/COOP en consola). Cae directo a la llave.
+  if (Date.now() < _renoCooldownHasta) return Promise.resolve(null);
   if (!_renovacionEnCurso) {
     _renovacionEnCurso = renovarTokenSilencioso()
-      .catch(function () { return null; })
+      .then(function (v) {
+        if (!v) _renoCooldownHasta = Date.now() + RENOVACION_COOLDOWN_MS;   // solo en fallos
+        return v;
+      })
+      .catch(function () { _renoCooldownHasta = Date.now() + RENOVACION_COOLDOWN_MS; return null; })
       .finally(function () { _renovacionEnCurso = null; });
   }
   return _renovacionEnCurso;
