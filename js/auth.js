@@ -347,9 +347,24 @@ async function apiRequest(modo, fileId, extra) {
   }
 
   // Fallback: llave (red de seguridad durante la transición)
-  const resK = await _intentoApi('key=' + ACCESS_KEY + sufijo, modo);
+  let resK = await _intentoApi('key=' + ACCESS_KEY + sufijo, modo);
   if (resK.ok) return resK.payload;
-  throw new Error(resK.code || 'error');
+
+  // 'temporalmente_ocupado' = una sync del backend sostiene el lock y dice que
+  // lo suelta en ≤1.8 s; es transitorio (pasa cada 5 min). Reintentar con
+  // backoff corto antes de fallar (contrato del backend: "reintente al instante").
+  if (resK.code === 'temporalmente_ocupado') {
+    for (let i = 1; i <= 2; i++) {
+      await new Promise(function (r) { setTimeout(r, 800 * i); });
+      resK = await _intentoApi('key=' + ACCESS_KEY + sufijo, modo);
+      if (resK.ok) return resK.payload;
+      if (resK.code !== 'temporalmente_ocupado') break;
+    }
+  }
+
+  const err = new Error(resK.code || 'error');
+  err.code = resK.code || 'error';
+  throw err;
 }
 
 // ============================================================

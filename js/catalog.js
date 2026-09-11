@@ -150,9 +150,23 @@ async function syncFotosCache() {
       applyFilters();
     }
   } catch(e) {
+    // 'temporalmente_ocupado' = una sync del backend sostiene el lock; es
+    // transitorio y esperado (la sync corre cada 5 min). NO es un fallo de la
+    // app: reintentamos en silencio y sin spam de consola.
+    if (e && e.code === 'temporalmente_ocupado') {
+      if (!window._fotosRetryScheduled) {
+        window._fotosRetryScheduled = true;
+        setTimeout(function () {
+          window._fotosRetryScheduled = false;
+          localStorage.removeItem(FOTOS_CACHE_EXP_KEY);   // fuerza re-intento
+          syncFotosCache();
+        }, 5 * 60 * 1000);
+      }
+      return;
+    }
     console.warn('Cache de fotos no actualizado:', e);
-    // Backend ocupado (lock) o versión desplegada sin ?fotos=1: re-intentar
-    // una vez en 90 s. Mientras tanto las miniaturas caen a col B (fallback).
+    // Cualquier otro fallo: re-intentar una vez en 90 s. Mientras tanto las
+    // miniaturas caen a col B (fallback).
     if (!window._fotosRetryScheduled) {
       window._fotosRetryScheduled = true;
       setTimeout(function () {
