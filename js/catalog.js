@@ -149,7 +149,19 @@ async function syncFotosCache() {
       // mostrar las miniaturas (no bloquea nada; es un render rápido).
       applyFilters();
     }
-  } catch(e) { console.warn('Cache de fotos no actualizado:', e); }
+  } catch(e) {
+    console.warn('Cache de fotos no actualizado:', e);
+    // Backend ocupado (lock) o versión desplegada sin ?fotos=1: re-intentar
+    // una vez en 90 s. Mientras tanto las miniaturas caen a col B (fallback).
+    if (!window._fotosRetryScheduled) {
+      window._fotosRetryScheduled = true;
+      setTimeout(function () {
+        window._fotosRetryScheduled = false;
+        localStorage.removeItem(FOTOS_CACHE_EXP_KEY);   // fuerza re-intento
+        syncFotosCache();
+      }, 90000);
+    }
+  }
 }
 
 // ── INIT ───────────────────────────────────────────────────────────────────
