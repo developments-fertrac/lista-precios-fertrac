@@ -460,3 +460,99 @@
     padding: 4px;
     flex-shrink: 0;
   }
+
+  /* ══════════════════════════════════════════════════════════════════════
+     FASE 2 — RESPONSIVE v2
+     dvh/svh (iOS), meta delgada, safe-area (notch/home-indicator),
+     doblez/dobles pliegues (~280-320px), landscape bajo, clamp() fluido.
+     Va al final: sobrescribe reglas previas por cascada.
+     ══════════════════════════════════════════════════════════════════════ */
+
+  /* Altura dinámica del viewport (la barra de direcciones de iOS colapsa) */
+  #login-screen { min-height: 100vh; min-height: 100dvh; }
+
+  /* Botón "ir arriba": nunca debajo del home-indicator / rincón redondeado */
+  #go-top-btn {
+    right: max(16px, env(safe-area-inset-right, 0px));
+    bottom: max(16px, env(safe-area-inset-bottom, 0px));
+  }
+
+  /* Banner de instalación iOS pegado abajo: respeta la zona segura */
+  #ios-install-banner {
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  }
+
+  /* Tipografía fluida: escala continua, sin saltos bruscos */
+  .header-title { font-size: clamp(0.75rem, 2.5vw, 0.95rem); }
+  .login-card h2 { font-size: clamp(1.15rem, 6vw, 1.4rem); }
+  #search-input  { font-size: clamp(0.9rem, 2.6vw, 1rem); }
+  .price-card .amount { font-size: clamp(0.95rem, 3.2vw, 1.15rem); }
+
+  /* Logos de marca: más chicos en pantallas angostas para no robar espacio */
+  @media (max-width: 600px) {
+    .detail-header-logo { height: 22px; }
+    .th-logo, .h3-logo { height: 26px; margin-left: 6px; }
+  }
+
+  /* Doblez/pliegues: ~380px y menos (Galaxy Fold/Z Flip exterior, mini) */
+  @media (max-width: 380px) {
+    header {
+      padding: 8px 10px;
+      gap: 6px;
+    }
+    main { padding: 12px; }
+    .search-box { padding: 12px; }
+    .search-row { gap: 6px; }
+    #search-input { padding: 9px 12px; font-size: 0.9rem; }
+    #clear-btn { padding: 9px 10px; font-size: 0.8rem; }
+    .filters-grid { grid-template-columns: 1fr 1fr; gap: 6px; }
+    .ms-btn { font-size: 0.78rem; padding: 7px 8px; }
+    .ms-dropdown {
+      min-width: 0;
+      max-width: calc(100vw - 20px);
+      left: 0;
+      right: auto;
+    }
+    .instructions { padding: 8px 12px; font-size: 0.76rem; }
+    .detail-body { padding: 14px; }
+    .detail-section h3 { font-size: 0.74rem; }
+    #sync-btn { padding: 7px 10px; font-size: 0.75rem; }
+    #logout-btn { padding: 7px 8px; font-size: 0.75rem; }
+    #sync-status { display: none; }      /* gana aire al header angosto */
+    tbody tr { padding: 8px 10px; grid-column-gap: 8px; }
+    tbody td { font-size: 0.8rem; }
+  }
+
+  /* Pliegue cerrado (~280px): una sola columna de filtros y compacto */
+  @media (max-width: 320px) {
+    .filters-grid { grid-template-columns: 1fr; }
+    main { padding: 10px; }
+    .price-cards, .info-cards { grid-template-columns: 1fr 1fr; gap: 8px; }
+    .detail-grid { gap: 12px; }
+    .login-card { padding: 28px 20px; }
+    .login-logo { height: 52px; }
+    #go-top-btn { padding: 8px 14px; font-size: 0.8rem; }
+  }
+
+  /* Landscape con poca altura (móvil acostado): el buscador manda */
+  @media (orientation: landscape) and (max-height: 480px) {
+    #login-screen { min-height: 100vh; min-height: 100svh; min-height: 100dvh; }
+    header { padding: 6px 12px; }
+    main { padding: 10px; }
+    .instructions { display: none; }
+    .search-box { padding: 10px; margin-bottom: 10px; }
+    .table-wrapper { margin-bottom: 10px; }
+    .detail-body { padding: 12px; }
+    #go-top-btn { bottom: max(10px, env(safe-area-inset-bottom, 0px)); }
+  }
+
+  /* Notch largo / pantallas 21:9 */
+  body { -webkit-tap-highlight-color: transparent; }
+
+  /* Escritorios amplios: el listado aprovecha el ancho extra */
+  @media (min-width: 1000px) {
+    main { max-width: 1080px; }
+    .detail-header h2 { font-size: 1.15rem; }
+  }
