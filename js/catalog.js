@@ -143,7 +143,12 @@ async function syncFotosCache() {
   }
   try {
     const res = await App.ApiClient.getFotos();
-    if (res && res.ok && res.fotos) saveFotosCache(res.fotos);
+    if (res && res.ok && res.fotos) {
+      saveFotosCache(res.fotos);
+      // Fase 4: al disponer del mapa de fotos, repintar la tabla para
+      // mostrar las miniaturas (no bloquea nada; es un render rápido).
+      applyFilters();
+    }
   } catch(e) { console.warn('Cache de fotos no actualizado:', e); }
 }
 
@@ -592,10 +597,32 @@ function clearAll() {
 function nRefUp(v) { return String(v === null || v === undefined ? '' : v).trim().toUpperCase(); }
 
 const TableView = {
-  cellsHTML(r) {
+  // Fase 4: miniatura del producto en la tabla. Resuelve la URL desde el
+  // mapa de fotos cacheado (sin llamadas HTTP por fila). Sin URL conocida →
+  // placeholder silencioso.
+  thumbHTML(r, fotos) {
+    const ref = String(r[C.REF] || '').trim().toUpperCase();
+    let url = '';
+    if (fotos) {
+      const dv = fotos[ref];
+      if (dv) {
+        const id = extractDriveId(dv);
+        url = id
+          ? 'https://drive.google.com/thumbnail?id=' + encodeURIComponent(id) + '&sz=w200'
+          : dv;
+      }
+    }
+    return '<td class="td-img"><div class="cell-thumb' + (url ? '' : ' empty') + '">' +
+      (url
+        ? '<img src="' + url + '" loading="lazy" referrerpolicy="no-referrer" class="row-img" alt="" onerror="this.parentNode.classList.add(\'empty\');this.remove();">'
+        : '') +
+      '</div></td>';
+  },
+  cellsHTML(r, fotos) {
     const inv = parseFloat(r[C.INV]) || 0;
     const invCls = inv > 10 ? 'ok' : inv > 0 ? 'low' : 'none';
-    return '<td class="td-ref">' + (r[C.REF]||'—') + '</td>' +
+    return this.thumbHTML(r, fotos) +
+      '<td class="td-ref">' + (r[C.REF]||'—') + '</td>' +
       '<td class="td-marca"><span class="tag">' + (r[C.MARCA]||'—') + '</span></td>' +
       '<td class="td-producto">' + (r[C.PRODUCTO]||'—') + '</td>' +
       '<td class="td-inv"><span class="inv-pill ' + invCls + '">' + inv + '</span></td>' +
@@ -611,12 +638,13 @@ const TableView = {
   patch(refs) {
     const tbody = document.querySelector('#table-wrapper tbody');
     if (!tbody) return;
+    const fotos = loadFotosCache() || null;
     for (let i = 0; i < tbody.rows.length; i++) {
       const tr = tbody.rows[i];
       const ref = tr.getAttribute('data-ref');
       if (ref && refs.indexOf(ref) >= 0) {
         const r = Store.getRow(ref);
-        if (r) { tr.style.cssText = this.rowStyle(r); tr.innerHTML = this.cellsHTML(r); }
+        if (r) { tr.style.cssText = this.rowStyle(r); tr.innerHTML = this.cellsHTML(r, fotos); }
       }
     }
     const meta = document.getElementById('results-meta');
@@ -633,14 +661,16 @@ function renderTable() {
     return;
   }
   const show = filtered.slice(0, 200);
+  const fotos = loadFotosCache() || null;
   const rows = show.map(r => {
     const ref = nRefUp(r[C.REF]);
     return '<tr data-ref="' + ref + '" style="' + TableView.rowStyle(r) + '">' +
-      TableView.cellsHTML(r) +
+      TableView.cellsHTML(r, fotos) +
       '</tr>';
   }).join('');
   wrapper.innerHTML =
     '<table><thead><tr>' +
+      '<th style="width:64px">Foto</th>' +
       '<th>Referencia</th>' +
       '<th>Marca</th>' +
       '<th>Producto <img src="https://raw.githubusercontent.com/developments-fertrac/lista-precios-fertrac/main/logo2.png" alt="Fertrac" class="th-logo" onerror="this.style.display=\'none\'"></th>' +
@@ -959,12 +989,38 @@ async function autoRefresh() {
   if (Store.count === 0) return;                       // aún no hay datos base
 
   try {
-    // FASE 2: token-first con key-fallback (antes era un fetch directo con ?key=)
-    const json = await App.ApiClient.getData();
+    // FASE 3: delta incremental (solo filas modificadas desde el último
+    // `since`). La primera vez (sin `since`) el backend responde completo.
+    const since = localStorage.getItem('fertrac_delta_since') || '';
+    const json = since
+      ? await App.ApiClient.getDataDelta(since)
+      : await App.ApiClient.getData();
 
+    // ── Delta: fusionar filas en el Store (patch granular sin re-render) ──
+    if (json && json.delta) {
+      if (!json.rows) return;
+      const fresh = json.rows.map(row =>
+        row.map(cell => cell === null || cell === undefined ? '' : String(cell).trim())
+      );
+      const changed = Store.applyDelta(fresh, json.refs);
+      localStorage.setItem('fertrac_delta_since', json.since || '');
+      if (changed) {
+        saveData(Store.rows);
+        const status = document.getElementById('sync-status');
+        if (status) status.textContent = '✅ Actualizado: ' + localStorage.getItem('fertrac_updated');
+      }
+      return;
+    }
+
+    // ── Full (primera vez o respuesta no-delta): flujo anterior con hash ──
+    if (!json || !json.data) return;
     const fresh = json.data.slice(1).map(row =>
       row.map(cell => cell === null || cell === undefined ? '' : String(cell).trim())
     );
+
+    // FASE 3: anclar el `since` local a este momento para que el siguiente
+    // refresh ya use delta (evita reenviar todo el catálogo en cada ciclo).
+    localStorage.setItem('fertrac_delta_since', new Date().toISOString());
 
     // Solo actualizar si REALMENTE cambió algo
     if (dataHash(fresh) === dataHash(Store.rows)) return;
@@ -1016,10 +1072,21 @@ Store.subscribe('product.removed', function (payload) {
   else TableView.patch(payload.refs);
 });
 
-// Rastreo de actividad (Fase 3 lo enviará al backend).
+// ── Rastreo de actividad (Fase 3) ──
+// Los eventos de sesión viajan al backend (ACTIVIDAD_USUARIOS) con el mismo
+// transporte del API (token-first/key-fallback). Son best-effort: una caída
+// de red o un logout con reload pueden perder el último registro.
+Store.subscribe('user.login', function () {
+  App.ApiClient.sendActivity('login');
+});
+Store.subscribe('session.heartbeat', function () {
+  App.ApiClient.sendActivity('heartbeat');
+});
 Store.subscribe('user.inactive', function () {
   console.log('[sesión] Usuario marcado como inactivo (5 min sin actividad)');
+  App.ApiClient.sendActivity('inactive');
 });
 Store.subscribe('session.end', function (p) {
   console.log('[sesión] Finalizada:', p && p.email);
+  App.ApiClient.sendActivity('end');
 });

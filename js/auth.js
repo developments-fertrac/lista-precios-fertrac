@@ -254,12 +254,23 @@ async function _intentoApi(qs, modo) {
 }
 
 // ── Petición al API con token-first y key-fallback ──
-// modo: 'data' (catálogo) | 'img' (imagen, requiere fileId) | 'fotos' (catálogo de fotos)
-async function apiRequest(modo, fileId) {
+// modo: 'data' (catálogo) | 'img' (imagen, fileId) | 'fotos' (catálogo de fotos)
+//       | 'activity' (eventos de sesión)
+// extra (opcional): params adicionales → 'data?delta=1&since=...', etc.
+async function apiRequest(modo, fileId, extra) {
   let sufijo;
   if (modo === 'img') sufijo = '&img=' + encodeURIComponent(fileId);
   else if (modo === 'fotos') sufijo = '&fotos=1';
-  else sufijo = '';
+  else if (modo === 'data' && extra && extra.delta) {
+    sufijo = '&delta=1';
+    if (extra.since) sufijo += '&since=' + encodeURIComponent(extra.since);
+  } else if (modo === 'activity' && extra) {
+    if (extra.activity) sufijo += '&activity=' + encodeURIComponent(extra.activity);
+    if (extra.email)   sufijo += '&email=' + encodeURIComponent(extra.email);
+    if (extra.platform) sufijo += '&platform=' + encodeURIComponent(extra.platform);
+  } else {
+    sufijo = '';
+  }
 
   // Token disponible (si expiró localmente, intenta renovar antes de pedir)
   let token = getToken();

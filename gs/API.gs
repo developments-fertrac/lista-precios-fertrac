@@ -71,15 +71,57 @@ function doGet(e) {
     });
   }
 
-  // ── 4. Datos del catálogo: { data: [...] } ──
+  // ── 4. Actividad de sesión: ?activity=login|heartbeat|end|inactive ──
+  // Registra en ACTIVIDAD_USUARIOS cada evento de sesión de la app. El
+  // heartbeat se mama con CacheService (1 log por usuario/hora) para no
+  // llenar la hoja con un registro por minuto. No expone datos: solo FECHA,
+  // EMAIL, PLATAFORMA y TIPO.
+  if (params.activity) {
+    const tipo = ["login", "heartbeat", "end", "inactive"].includes(params.activity)
+      ? params.activity : null;
+    if (!tipo) return jsonError_('actividad_invalida');
+    registrarActividad_(params.email, tipo, params.platform);
+    return jsonRes_({ ok: true });
+  }
+
+  // ── 5. Reporte de inactivos: ?report=inactivos&dias=N ──
+  // Devuelve la lista de usuarios sin actividad en los últimos N días (N por
+  // defecto = CONFIG.REPORTE_DIAS_INACTIVOS). La hoja ACTIVIDAD_USUARIOS
+  // se crea sola la primera vez.
+  if (params.report === "inactivos") {
+    const dias = parseInt(params.dias, 10) || CONFIG.REPORTE_DIAS_INACTIVOS;
+    return jsonRes_({ ok: true, inactivos: usuariosInactivos_(dias) });
+  }
+
+  // ── 6. Datos incrementales: ?delta=1&since=ISO ──
+  // Devuelve solo las filas modificadas después de `since`. La marca W
+  // (col 23) la actualiza cada sync (diurna y completa) así que sirve de
+  // reloj de cambios. `since` vacío → respuesta completa (primera vez).
+  // La respuesta firma `since` = mayor W visto para que el cliente lo
+  // reenvíe en la siguiente llamada sin perder filas.
+  if (params.delta === "1") {
+    const resDatos = obtenerDatosListaCacheados_();
+    if (!resDatos.ok) return jsonError_(resDatos.error || 'error');
+    return jsonRes_(filtrarDelta_(resDatos.data, params.since));
+  }
+
+  // ── 7. Datos del catálogo: { data: [...] } ──
   // Se sirve de cache cuando está vigente (rápido). Si caducó, se lee la hoja
   // bajo lock (para evitar un estado a medias) y se repuebla el caché.
+  const resDatos = obtenerDatosListaCacheados_();
+  if (!resDatos.ok) return jsonError_(resDatos.error || 'error');
+  return ContentService
+    .createTextOutput(JSON.stringify({ data: resDatos.data }))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+// ── Lee el catálogo completo de Hoja2 (con caché + lock) ──
+// Devuelve { ok: true, data: [...] } o { ok: false, error: '...' }.
+function obtenerDatosListaCacheados_() {
   const cache = CacheService.getScriptCache();
   const jsonCache = cache.get(API_CACHE_LISTA);
   if (jsonCache) {
-    return ContentService
-      .createTextOutput(jsonCache)
-      .setMimeType(ContentService.MimeType.JSON);
+    try { return { ok: true, data: JSON.parse(jsonCache).data || [] }; } catch (e) {}
   }
 
   const lock = LockService.getScriptLock();
@@ -90,34 +132,69 @@ function doGet(e) {
     // responde 'temporalmente_ocupado' casi de inmediato (máx ~1.8s) para que
     // el frontend reintente al instante, en lugar de dejar al usuario esperando
     // ~8s. La lectura a medias se evita igual: no se lee sin lock.
-    if (!lock.tryLock(1500)) {
-      return jsonError_('temporalmente_ocupado');
-    }
+    if (!lock.tryLock(1500)) return { ok: false, error: 'temporalmente_ocupado' };
     tieneLock = true;
 
     // Doble chequeo: quizá otra invocación pobló el caché mientras esperábamos.
     const jsonAhora = cache.get(API_CACHE_LISTA);
     if (jsonAhora) {
-      return ContentService
-        .createTextOutput(jsonAhora)
-        .setMimeType(ContentService.MimeType.JSON);
+      try { return { ok: true, data: JSON.parse(jsonAhora).data || [] }; } catch (e) {}
     }
 
     const sh = SpreadsheetApp.openById(CONFIG.ID_BASE_MOTOR).getSheetByName(CONFIG.SHEET_MOTOR);
     const values = sh.getDataRange().getValues();       // incluye fila 1 (encabezado)
-    const out = JSON.stringify({ data: values });
-    cache.put(API_CACHE_LISTA, out, API_TTL_LISTA);     // repoblar caché
-    return ContentService
-      .createTextOutput(out)
-      .setMimeType(ContentService.MimeType.JSON);
+    cache.put(API_CACHE_LISTA, JSON.stringify({ data: values }), API_TTL_LISTA); // repoblar caché
+    return { ok: true, data: values };
 
   } catch (err) {
-    return ContentService
-      .createTextOutput(JSON.stringify({ error: err.message }))
-      .setMimeType(ContentService.MimeType.JSON);
+    return { ok: false, error: err.message };
   } finally {
     if (tieneLock) lock.releaseLock();
   }
+}
+
+// ── Filtra filas modificadas después de `since` (col W = 22 en 0-based) ──
+// Devuelve:
+//   rows — filas con W posterior a `since`; si `since` es vacío, todas.
+//   refs — lista COMPLETA de refs vigentes. El cliente la usa para detectar
+//          borrados (un ref que teníamos y que ya no está en `refs`).
+// `since` devuelto = máximo W visto; el cliente lo reenvía: así ninguna fila
+// modificada en el mismo segundo se pierde (si el W máximo se reenvía, se
+// re-descarga al siguiente ciclo sin consecuencia).
+function filtrarDelta_(values, since) {
+  const W = 22; // columna 23 (W) en índice 0-based
+  const sinceTs = since ? Date.parse(since) : 0;
+  const primerVez = !since || Number.isNaN(sinceTs) || since === "0" || sinceTs <= 0;
+
+  let maxTs = 0;
+  const rows = [];
+  const refs = [];
+
+  (values || []).forEach((row, i) => {
+    if (i === 0) return;                                  // encabezado
+    const ref = String(row[0] || "").trim().toUpperCase();
+    if (!ref) return;
+
+    refs.push(ref);
+
+    let ts = 0;
+    const wVal = row[W];
+    if (wVal instanceof Date) {
+      ts = wVal.getTime();
+    } else if (typeof wVal === "string" && wVal.trim()) {
+      const p = Date.parse(wVal);
+      if (!Number.isNaN(p)) ts = p;
+    }
+
+    if (ts > maxTs) maxTs = ts;
+    if (primerVez || ts > sinceTs) rows.push(row);
+  });
+
+  const nuevoSince = maxTs > 0
+    ? new Date(maxTs).toISOString()
+    : new Date().toISOString();
+
+  return { ok: true, delta: true, since: nuevoSince, refs, rows };
 }
 
 // Respuesta de error estándar en JSON.

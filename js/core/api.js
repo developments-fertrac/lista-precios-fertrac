@@ -18,6 +18,14 @@ window.App = window.App || {};
     return Queue.enqueue('data', function () { return transport()('data'); });
   }
 
+  // Fase 3: datos incrementales (solo filas modificadas desde `since`).
+  // `since` viene del último delta; vacío → el backend responde completo.
+  function getDataDelta(since) {
+    return Queue.enqueue('data', function () {
+      return transport()('data', null, { delta: true, since: since || '' });
+    });
+  }
+
   function getFotos() {
     return Queue.enqueue('fotos', function () { return transport()('fotos'); });
   }
@@ -26,24 +34,26 @@ window.App = window.App || {};
     return Queue.enqueue('img:' + fileId, function () { return transport()('img', fileId); });
   }
 
-  // Fase 3: registra eventos de sesión (login | heartbeat | end) en el
-  // backend de logs. Sin email → no enviar (no auditor puede no loguear).
+  // Fase 3: registra eventos de sesión (login | heartbeat | end | inactive).
+// Se envía al API principal (APPS_SCRIPT_URL), autorizado igual que el
+// resto (token-first/key-fallback) y con cola de dedupe por tipo+email.
+// Sin sesión → no enviar. Errores de red son tolerados (best effort).
   function sendActivity(type) {
+    if (!/^(login|heartbeat|end|inactive)$/.test(type)) return Promise.resolve({ ok: false });
     let email = null;
     try { email = localStorage.getItem('fertrac_user'); } catch (e) {}
     if (!email) return Promise.resolve({ ok: true, queued: false });
-    const url = LOG_SCRIPT_URL.split('?')[0]
-      + '?email=' + encodeURIComponent(email)
-      + '&activity=' + encodeURIComponent(type)
-      + '&key=' + encodeURIComponent(ACCESS_KEY)
-      + '&ts=' + Date.now();
-    return fetch(url)
-      .then(function (r) { return r.ok ? { ok: true } : { ok: false }; })
-      .catch(function () { return { ok: false }; });
+    const platform = (window.App.Platform && App.Platform.label) || 'web';
+    return Queue.enqueue('activity:' + type + ':' + email, function () {
+      return transport()('activity', null, { activity: type, email: email, platform: platform })
+        .then(function () { return { ok: true }; })
+        .catch(function () { return { ok: false }; });
+    });
   }
 
   window.App.ApiClient = {
     getData: getData,
+    getDataDelta: getDataDelta,
     getFotos: getFotos,
     getImg: getImg,
     sendActivity: sendActivity

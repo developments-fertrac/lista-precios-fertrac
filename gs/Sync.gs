@@ -105,7 +105,8 @@ function probarCompleta() {
 
 function ejecutarDiurna_() {
 
-  const ssMotor = SpreadsheetApp.openById(CONFIG.ID_BASE_MOTOR);
+  const ahora    = new Date();
+  const ssMotor  = SpreadsheetApp.openById(CONFIG.ID_BASE_MOTOR);
   const ssLista = SpreadsheetApp.openById(CONFIG.ID_LISTA_PRECIOS);
   const shMotor = ssMotor.getSheetByName(CONFIG.SHEET_MOTOR);
   const shLista = ssLista.getSheetByName(CONFIG.SHEET_LISTA);
@@ -194,6 +195,7 @@ function ejecutarDiurna_() {
   const bloqueS             = shMotor.getRange(MOTOR_DATA_ROW, MOTOR_COL_INV, totalRowsMotor2, 1).getValues();
 
   let actualizadas = 0, sinCambios = 0;
+  const filasConCambio = [];
 
   mapaLista.forEach(({ precio, inv, neto5, neto8, promo }, ref) => {
     if (!mapaMotor2.has(ref)) return;
@@ -216,6 +218,7 @@ function ejecutarDiurna_() {
 
     if (cambio) {
       actualizadas++;
+      filasConCambio.push(filaReal);   // Fase 3: W será el reloj del delta
       // ═══ DIAGNÓSTICO TEMPORAL — quitar cuando se confirme estabilidad ═══
       console.log(`🔍 Cambio detectado en Ref: ${ref} (fila ${filaReal})`);
       // ═════════════════════════════════════════════════════════════════
@@ -227,6 +230,9 @@ function ejecutarDiurna_() {
   if (actualizadas > 0) {
     shMotor.getRange(MOTOR_DATA_ROW, MOTOR_COL_PRECIO, totalRowsMotor2, 4).setValues(bloqueKN);
     shMotor.getRange(MOTOR_DATA_ROW, MOTOR_COL_INV, totalRowsMotor2, 1).setValues(bloqueS);
+    // Marca W (fecha/hora) en las filas realmente cambiadas: alimenta el
+    // endpoint ?delta=1. Cada setValue individual es barato para pocas filas.
+    filasConCambio.forEach(fila => shMotor.getRange(fila, 23).setValue(ahora));
   }
 
   console.log(`✅ Sync DIURNA | Filas con cambio real: ${actualizadas} | Sin cambios: ${sinCambios} | Inactivadas: ${inactivadas}`);

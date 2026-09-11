@@ -114,10 +114,47 @@ window.App = window.App || {};
 
   function clear() { setCatalog([]); }
 
-  window.App.Store = {
+  // Fase 3: fusiona filas delta en el estado actual.
+  //   rows    — filas cambiadas/agregadas (reemplazan por ref, nuevas al final)
+  //   refsAll — lista COMPLETA de refs vigentes según el backend. Sin esta
+  //             lista no se pueden detectar borrados (la ausencia de un ref
+  //             en `rows` significa "sin cambios", no "removido").
+  // Emite eventos granulares: alta → 'catalog.replaced' (cambio estrutural),
+  // modificación → 'product.changed', baja → 'product.removed'.
+  function applyDelta(rows, refsAll) {
+    const upd = new Map();
+    (rows || []).forEach(function (r) {
+      const k = nRef(r[REF]);
+      if (k) upd.set(k, r);
+    });
+
+    const keep = refsAll ? new Set(refsAll.map(nRef).filter(Boolean)) : null;
+
+    const merged = [];
+    const present = new Set();
+    state.rows.forEach(function (r) {
+      const k = nRef(r[REF]);
+      if (!k) return;
+      if (keep && !keep.has(k)) return;          // ref ya no existe → baja
+      present.add(k);
+      merged.push(upd.get(k) || r);              // reemplazo o sin cambios
+    });
+    upd.forEach(function (r, k) {
+      if (present.has(k) || (keep && !keep.has(k))) return;
+      present.add(k);
+      merged.push(r);                            // alta
+    });
+
+    // Alta de productos → cambio estrutural (re-render ordenado).
+    const added = merged.length > state.rows.length;
+    return setCatalog(merged, added ? { forceFull: true } : {});
+  }
+
+window.App.Store = {
     subscribe: subscribe,
     notify: notify,
     setCatalog: setCatalog,
+    applyDelta: applyDelta,
     clear: clear,
     diff: diff,
     getRow: getRow,

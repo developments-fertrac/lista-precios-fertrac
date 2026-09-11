@@ -19,6 +19,12 @@ const CONFIG = {
   SHEET_CLASIF:     "CLASIFICACION FINAL CATALOGO",
   SHEET_CONFLICTOS: "CONFLICTOS CLASIFICACION",
   SHEET_PENDIENTES: "PENDIENTES SIN HOJA2",
+  SHEET_ACTIVIDAD:  "ACTIVIDAD_USUARIOS",
+
+  // ── Seguimiento de actividad (Fase 3) ──
+  ACTIVIDAD_TTL_HEARTBEAT: 3600,   // throttle: 1 log de heartbeat por usuario/hora
+  REPORTE_DIAS_INACTIVOS:  7,      // días sin actividad para reportar como inactivo
+  REPORTE_HORA:            6,      // hora diaria del reporte
 
   // ── LISTA DE PRECIOS (origen) ──
   LISTA_DATA_ROW:   12,

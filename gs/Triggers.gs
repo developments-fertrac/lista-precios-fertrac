@@ -15,6 +15,7 @@ function instalarTriggers() {
       t.getHandlerFunction() === "sincronizacionCompleta" ||
       t.getHandlerFunction() === "reconstruirFotosCache" ||
       t.getHandlerFunction() === "sincronizarNuevasReferencias" ||
+      t.getHandlerFunction() === "generarReporteInactivos" ||
       t.getHandlerFunction() === "onListaPreciosEdit")
     .forEach(t => ScriptApp.deleteTrigger(t));
 
@@ -37,7 +38,12 @@ function instalarTriggers() {
     .timeBased().everyDays(1).atHour(23)
     .nearMinute(30).create();
 
-  console.log("🚀 Triggers instalados — cada 5 min + onEdit LISTA DE PRECIOS (sync completa) + fotos nocturnas");
+  // Reporte diario de usuarios inactivos (a las REPORTE_HORA)
+  ScriptApp.newTrigger("generarReporteInactivos")
+    .timeBased().everyDays(1).atHour(CONFIG.REPORTE_HORA)
+    .create();
+
+  console.log("🚀 Triggers instalados — cada 5 min + onEdit LISTA DE PRECIOS (sync completa) + fotos nocturnas + reporte inactivos");
 }
 
 function eliminarTriggers() {
@@ -48,6 +54,7 @@ function eliminarTriggers() {
       t.getHandlerFunction() === "reconstruirFotosCache" ||
       t.getHandlerFunction() === "sincronizarFotosCache" ||
       t.getHandlerFunction() === "sincronizarNuevasReferencias" ||
+      t.getHandlerFunction() === "generarReporteInactivos" ||
       t.getHandlerFunction() === "onListaPreciosEditFotos" ||
       t.getHandlerFunction() === "onListaPreciosEdit")
     .forEach(t => ScriptApp.deleteTrigger(t));
