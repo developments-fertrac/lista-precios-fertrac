@@ -1,5 +1,5 @@
-const CACHE = 'fertrac-v10.3.3';
-const V = 'v=10.3.3';
+const CACHE = 'fertrac-v10.3.4';
+const V = 'v=10.3.4';
 
 // Fase 4: caché runtime de imágenes (thumbnails de Drive) — independiente del
 // precache: un bump de versión no borra las fotos ya descargadas.
@@ -11,8 +11,12 @@ async function responderImagenRuntime(req) {
   const hit = await cache.match(req);
   if (hit) return hit;                       // cache-first: re-ver instántaneo y offline
   try {
-    const res = await fetch(req, { mode: 'cors' });
-    if (res.ok) {
+    // no-cors: como un <img> normal. Drive no envía cabeceras CORS (con 'cors'
+    // el fetch del SW se rechazaba y el FetchEvent resolvía con error de red).
+    // La respuesta 'opaque' resultante sí puede guardarse en Cache API y el
+    // <img> la pinta igual. 'ok' es false en respuestas opaque → verificar type.
+    const res = await fetch(req, { mode: 'no-cors' });
+    if (res && (res.ok || res.type === 'opaque')) {
       const copy = res.clone();
       const keys = await cache.keys();
       if (keys.length >= RT_IMG_MAX) await cache.delete(keys[0]);   // round-robin (FIFO)
@@ -46,9 +50,12 @@ self.addEventListener('install', e => {
 
 self.addEventListener('activate', e => {
   e.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))
-    )
+    caches.keys().then(keys => {
+      const keep = [CACHE, RT_IMG_CACHE];     // preservar el caché runtime de imágenes
+      return Promise.all(
+        keys.filter(k => keep.indexOf(k) < 0).map(k => caches.delete(k))
+      );
+    })
   );
   self.clients.claim();
 });
