@@ -121,6 +121,24 @@ function checkAuth() {
     bootstrapToken();   // FASE 2: si no hay token, intenta conseguir uno en silencio
     return;
   }
+  // FASE 4: sin sesión guardada y sin red → el login de Google es imposible;
+  // avisar y deshabilitar el botón hasta que vuelva la conexión.
+  if (!navigator.onLine) {
+    const hint = document.getElementById('login-offline');
+    if (hint) hint.style.display = 'block';
+    const btn = document.querySelector('#login-screen .login-card button');
+    if (btn) {
+      btn.disabled = true;
+      btn.style.opacity = '0.5';
+    }
+    window.addEventListener('online', function () {
+      if (hint) hint.style.display = 'none';
+      if (btn) {
+        btn.disabled = false;
+        btn.style.opacity = '';
+      }
+    });
+  }
 }
 
 // FASE 2: migra en silencio a quien ya tiene sesión pero aún no tiene token.

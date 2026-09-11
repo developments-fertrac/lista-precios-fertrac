@@ -61,7 +61,7 @@ if ('serviceWorker' in navigator) {
   if (navigator.serviceWorker.controller) {
     let _recargando = false;
     navigator.serviceWorker.addEventListener('controllerchange', () => {
-      if (_recargando) return;
+      if (_recargando || !navigator.onLine) return;   // Fase 4: sin conexión no recargar
       _recargando = true;
       window.location.reload();
     });
@@ -194,7 +194,10 @@ function initApp() {
 };
 
 function showOfflineBanner() {
-  document.getElementById('offline-banner').classList.add('visible');
+  const b = document.getElementById('offline-banner');
+  const ts = localStorage.getItem('fertrac_updated');
+  b.textContent = ts ? '📵 Sin conexión — datos del ' + ts : '📵 Sin conexión — mostrando datos guardados';
+  b.classList.add('visible');
   document.getElementById('sync-status').textContent = '';
 }
 

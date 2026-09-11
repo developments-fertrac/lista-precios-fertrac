@@ -1,5 +1,5 @@
-const CACHE = 'fertrac-v10.3.4';
-const V = 'v=10.3.4';
+const CACHE = 'fertrac-v10.4.0';
+const V = 'v=10.4.0';
 
 // Fase 4: caché runtime de imágenes (thumbnails de Drive) — independiente del
 // precache: un bump de versión no borra las fotos ya descargadas.
@@ -26,6 +26,20 @@ async function responderImagenRuntime(req) {
   } catch (e) {
     return hit || Response.error();
   }
+}
+
+// Fase 4: devuelve el shell (index.html) precacheado. Útil cuando se abre la
+// app sin conexión: el precache guarda la URL con ?v=… y la navegación pide la
+// ruta limpia, así que se busca por pathname terminado en /index.html.
+async function shellDesdeCache() {
+  const cache = await caches.open(CACHE);
+  const keys = await cache.keys();
+  for (let i = 0; i < keys.length; i++) {
+    const p = new URL(keys[i].url).pathname;
+    if (p.charAt(p.length - 1) === '/') continue;
+    if (p.indexOf('/index.html') >= 0) return cache.match(keys[i]);
+  }
+  return null;
 }
 
 self.addEventListener('install', e => {
@@ -73,8 +87,12 @@ self.addEventListener('fetch', e => {
 
   e.respondWith(
     fetch(e.request).catch(() => {
-      // Fallback offline: el precache guarda las URLs CON ?v=…, la página pide
-      // sin query → normalizar quitando el query antes de buscar en caché.
+      // Offline.
+      // Navegación → devolver siempre el shell precacheado (SPA).
+      if (e.request.mode === 'navigate') {
+        return shellDesdeCache().then(c => c || Response.error());
+      }
+      // Recursos → normalizar quitando el query antes de buscar en caché.
       url.search = '';
       return caches.match(url.toString()).then(c => c || caches.match(e.request));
     })
