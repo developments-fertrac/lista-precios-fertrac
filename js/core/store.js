@@ -13,6 +13,12 @@ window.App = window.App || {};
   'use strict';
   if (window.App.Store) return;
 
+  // Columna de REFERENCIA (contrato con config.js: columna 0).
+  // Fallback defensivo: si `C` no estuviera disponible (cache vieja,
+  // orden de carga roto), usar la columna 0 que ES la referencia.
+  const REF = (C && typeof C.REF === 'number') ? C.REF : 0;
+  if (!C) console.warn('[Store] C no disponible; usando REF=columna 0. Verifica que config.js cargue antes que core/store.js y que no haya caché vieja del SW.');
+
   const state = { rows: [], byRef: new Map(), rev: 0 };
   const listeners = {};
 
@@ -38,7 +44,7 @@ window.App = window.App || {};
   function rebuild() {
     state.byRef.clear();
     state.rows.forEach(function (r, i) {
-      const k = nRef(r[C.REF]);
+      const k = nRef(r[REF]);
       if (k) state.byRef.set(k, i);
     });
   }
@@ -68,7 +74,7 @@ window.App = window.App || {};
     const result = { modified: [], added: [], removed: [], any: false };
     const idx = new Map();
     (newRows || []).forEach(function (r) {
-      const k = nRef(r[C.REF]);
+      const k = nRef(r[REF]);
       if (k && !idx.has(k)) idx.set(k, r);
     });
     idx.forEach(function (row, k) {
@@ -77,7 +83,7 @@ window.App = window.App || {};
       else if (!sameRow(state.rows[i], row)) result.modified.push(k);
     });
     state.rows.forEach(function (r) {
-      const k = nRef(r[C.REF]);
+      const k = nRef(r[REF]);
       if (k && !idx.has(k)) result.removed.push(k);
     });
     result.any = !!(result.modified.length || result.added.length || result.removed.length);
@@ -120,4 +126,4 @@ window.App = window.App || {};
     get rev() { return state.rev; },
     get count() { return state.rows.length; }
   };
-})(window, C);        // C: binding léxico global de config.js (no window.C)
+})(window, typeof C !== 'undefined' ? C : undefined);   // C: binding léxico global de config.js
