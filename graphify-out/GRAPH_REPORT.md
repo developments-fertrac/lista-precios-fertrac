@@ -1,111 +1,133 @@
-# Graph Report - lista-precios-fertrac  (2026-09-11)
+# Graph Report - lista-precios-fertrac  (2026-09-14)
 
 ## Corpus Check
-- 6 files · ~11,025 words
-- Verdict: corpus is large enough that graph structure adds value.
+- Corpus is ~29,652 words - fits in a single context window. You may not need a graph.
 
 ## Summary
-- 110 nodes · 189 edges · 18 communities (11 shown, 6 thin omitted)
-- Extraction: 98% EXTRACTED · 2% INFERRED · 0% AMBIGUOUS · INFERRED: 4 edges (avg confidence: 0.82)
+- 229 nodes · 386 edges · 20 communities (12 shown, 7 thin omitted)
+- Extraction: 96% EXTRACTED · 4% INFERRED · 0% AMBIGUOUS · INFERRED: 15 edges (avg confidence: 0.85)
 - Token cost: 0 input · 0 output
 
 ## Community Hubs (Navigation)
-- Google Authentication
-- Search Filters UI
-- Catalog & Photo Cache
+- Catalog Search & Filter UI
+- OAuth Authentication Flow
+- PWA Shell & Session Kernel
+- Sync & Trigger Orchestration
+- Photo Cache Pipeline
+- API Transport & Lock Contention
+- Client Data Store & Deltas
+- Activity Logging & API Gateway
 - PWA Manifest
 - Apps Script Config
-- Offline Sync
-- App Shell & Integrations
-- Product Card Rendering
-- MultiSelect Widget
-- Table Condition Styling
-- Scroll to Top
-- Image Modal
-- iOS Install Banner
-- App Config
-- Service Worker
-- Community 15
-- Community 16
+- Price Classification
+- Classification Conflict Checks
+- Pending Orders Report
+- Backend Configuration
+- Logo Brand Variant
+- Logo Detail Variant
+- Logo Prices Variant
+- Logo Dimensions
+- Main Logo Asset
 
 ## God Nodes (most connected - your core abstractions)
-1. `applyFilters()` - 10 edges
-2. `buildFilters()` - 9 edges
-3. `showDetail()` - 9 edges
-4. `index.html (App Shell)` - 8 edges
-5. `initApp()` - 7 edges
-6. `syncData()` - 7 edges
-7. `msRefresh()` - 7 edges
-8. `msSearch()` - 7 edges
-9. `autoRefresh()` - 6 edges
-10. `apiRequest()` - 5 edges
+1. `doGet()` - 10 edges
+2. `showDetail()` - 9 edges
+3. `applyFilters()` - 8 edges
+4. `sincronizarNuevasReferencias()` - 7 edges
+5. `_guardarEnCarpeta_()` - 7 edges
+6. `actualizarFotosConError()` - 7 edges
+7. `checkAuth()` - 7 edges
+8. `msRefresh()` - 7 edges
+9. `msSearch()` - 7 edges
+10. `transport()` - 7 edges
 
 ## Surprising Connections (you probably didn't know these)
 - `logo3.png - Logo Fertrac junto a seccion Precios` --references--> `showDetail()`  [EXTRACTED]
   logo3.png → js/catalog.js
+- `temporalmente_ocupado Error Response` --semantically_similar_to--> `Offline Mode (cached data display)`  [INFERRED] [semantically similar]
+  docs/LOCK_APPS_SCRIPT.md → index.html
+- `doGet()` --calls--> `obtenerUrlsFotosCache_()`  [INFERRED]
+  gs/API.gs → gs/Photos.gs
+- `doGet()` --calls--> `registrarActividad_()`  [INFERRED]
+  gs/API.gs → gs/Activity.gs
+- `doGet()` --calls--> `usuariosInactivos_()`  [INFERRED]
+  gs/API.gs → gs/Activity.gs
 
 ## Import Cycles
 - None detected.
 
 ## Hyperedges (group relationships)
-- **Offline-First PWA / Hybrid App Shell** — index_pwa, index_capacitor, index_offline_mode, index [INFERRED 0.75]
-- **Product Browsing Experience** — index_catalog_view, index_image_viewer, index [INFERRED 0.75]
+- **Core MVC Singleton Modules (loaded in dependency order)** — js_core_store, js_core_platform, js_core_queue, js_core_api, js_core_session [EXTRACTED 1.00]
+- **PWA App Shell Capabilities (manifest, offline, install, native bridge)** — index_pwa, index_offline_mode, index_capacitor, index_iframe_token_stop [INFERRED 0.85]
+- **Lock Service Behavioral Contract (lock, contention, retry, error, diagnostics)** — docs_lock_apps_script_global_lock, docs_lock_apps_script_lock_contention, docs_lock_apps_script_retry_backoff, docs_lock_apps_script_temporalmente_ocupado, docs_lock_apps_script_lock_contract, docs_lock_apps_script_diagnostic [EXTRACTED 1.00]
 
-## Communities (18 total, 6 thin omitted)
+## Communities (20 total, 7 thin omitted)
 
-### Community 0 - "Google Authentication"
-Cohesion: 0.22
-Nodes (17): apiRequest(), bootstrapToken(), cerrarSesion(), checkAuth(), clearToken(), getToken(), handleOAuthCallback(), initGIS() (+9 more)
+### Community 0 - "Catalog Search & Filter UI"
+Cohesion: 0.08
+Nodes (48): applyFilters(), autoRefresh(), buildFilters(), clearAll(), closeDetail(), CONDITION_COLOR_MAP, dataHash(), DetailView (+40 more)
 
-### Community 1 - "Search Filters UI"
+### Community 1 - "OAuth Authentication Flow"
+Cohesion: 0.18
+Nodes (23): apiRequest(), bloquearPorInactividad(), bootstrapToken(), cerrarSesion(), checkAuth(), clearToken(), evaluarInactividad(), gaMarcarApertura() (+15 more)
+
+### Community 2 - "PWA Shell & Session Kernel"
+Cohesion: 0.12
+Nodes (15): temporalmente_ocupado Error Response, Google Analytics / gtag.js Integration, Capacitor Runtime (Native Bridge), Catalog View (Search, Filters, Table, Detail Panel), Google Identity Services (GIS) iframe Token Refresh, Google Login Screen (@fertrac.com domain restriction), iframe Token Refresh Guard (window.stop), Image Viewer Modal (download + fullscreen) (+7 more)
+
+### Community 3 - "Sync & Trigger Orchestration"
 Cohesion: 0.15
-Nodes (8): allData, CONDITION_COLOR_MAP, FILTER_FIELDS, filtered, loadFotosCache(), saveFotosCache(), SEL, syncFotosCache()
+Nodes (10): invalidarCacheCatalogo_(), invalidarCacheFotos_(), ejecutarCompleta_(), ejecutarDiurna_(), probarCompleta(), probarDiurna(), reordenarBaseMotor(), sincronizacionCompleta() (+2 more)
 
-### Community 2 - "Catalog & Photo Cache"
+### Community 4 - "Photo Cache Pipeline"
+Cohesion: 0.25
+Nodes (14): actualizarFotosConError(), descargarFotosWebp(), _descargarWebp_(), _esWebpValido_(), _guardarEnCarpeta_(), _hacerPublicoLectura_(), _obtenerOCrearCache_(), obtenerUrlImagen() (+6 more)
+
+### Community 5 - "API Transport & Lock Contention"
 Cohesion: 0.23
-Nodes (12): drow(), extractDriveId(), formatPrice(), getConditionStyle(), hasCondition(), loadImage(), normalizeCondition(), pcard() (+4 more)
+Nodes (14): Lock Diagnostic Procedure, Global Script Lock (LockService.getScriptLock), Lock Contention / Concurrent Access, Lock Technical Contract, Frontend Retry with Exponential Backoff, colaActividadPendiente(), flushActividadPendiente(), getData() (+6 more)
 
-### Community 3 - "PWA Manifest"
+### Community 6 - "Client Data Store & Deltas"
+Cohesion: 0.25
+Nodes (10): applyDelta(), clear(), diff(), getRow(), getRowIndex(), notify(), nRef(), rebuild() (+2 more)
+
+### Community 7 - "Activity Logging & API Gateway"
+Cohesion: 0.25
+Nodes (12): generarReporteInactivos(), hojaActividad_(), registrarActividad_(), usuariosInactivos_(), doGet(), estaAutorizado_(), filtrarDelta_(), jsonError_() (+4 more)
+
+### Community 8 - "PWA Manifest"
 Cohesion: 0.18
 Nodes (10): background_color, description, display, icons, name, orientation, scope, short_name (+2 more)
 
-### Community 4 - "Apps Script Config"
+### Community 9 - "Apps Script Config"
 Cohesion: 0.20
 Nodes (9): dependencies, enabledAdvancedServices, exceptionLogging, oauthScopes, runtimeVersion, timeZone, webapp, access (+1 more)
 
-### Community 5 - "Offline Sync"
-Cohesion: 0.33
-Nodes (9): index.html (App Shell), Google Analytics (gtag G-6XDQTNYZ58), Capacitor Runtime Detection (capacitor.js), Catalog Search/Filter/Detail UI, Google Identity Services (gsi/client), Google OAuth Login (loginWithGoogle, @fertrac.com), Product Image Modal with Download, Offline Mode & Sync Status (+1 more)
+### Community 10 - "Price Classification"
+Cohesion: 0.42
+Nodes (8): aplicarClasificacion_(), aplicarClasificacionManual(), ejecutar_aplicarClasificacionManual_desdeFilaEspecifica(), ejecutar_simularClasificacion_desdeFilaEspecifica(), _ejecutarClasificacionConLock_(), _obtenerReferenciasEnConflicto_(), simularClasificacion(), test_obtenerReferenciasEnConflicto()
 
-### Community 6 - "App Shell & Integrations"
-Cohesion: 0.33
-Nodes (9): applyFilters(), clearAll(), closeDetail(), fieldValues(), fval(), msAppendOption(), msRefresh(), msToggleOpt() (+1 more)
-
-### Community 7 - "Product Card Rendering"
-Cohesion: 0.60
-Nodes (5): buildFilters(), msClear(), msClose(), msSearch(), msToggle()
-
-### Community 8 - "MultiSelect Widget"
+### Community 11 - "Classification Conflict Checks"
 Cohesion: 0.83
-Nodes (4): initApp(), loadData(), showOfflineBanner(), syncData()
-
-### Community 9 - "Table Condition Styling"
-Cohesion: 0.67
-Nodes (4): msAppendMoreBtn(), msAppendPage(), msLoadMore(), msRenderOpts()
-
-### Community 10 - "Scroll to Top"
-Cohesion: 0.67
-Nodes (3): autoRefresh(), dataHash(), saveData()
+Nodes (3): ejecutar_validarConflictosClasificacion_desdeFilaEspecifica(), _limpiarHojaConflictos_(), validarConflictosClasificacion()
 
 ## Knowledge Gaps
-- **28 isolated node(s):** `background_color`, `description`, `display`, `icons`, `name` (+23 more)
-  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 40 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
-- **6 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **33 isolated node(s):** `CONFIG`, `timeZone`, `enabledAdvancedServices`, `exceptionLogging`, `runtimeVersion` (+28 more)
+  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 61 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
+- **7 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `showDetail()` connect `Catalog & Photo Cache` to `Search Filters UI`, `Scroll to Top`?**
-  _High betweenness centrality (0.010) - this node is a cross-community bridge._
-- **What connects `background_color`, `description`, `display` to the rest of the system?**
-  _28 weakly-connected nodes found - possible documentation gaps or missing edges._
+- **Why does `invalidarCacheCatalogo_()` connect `Sync & Trigger Orchestration` to `Activity Logging & API Gateway`?**
+  _High betweenness centrality (0.021) - this node is a cross-community bridge._
+- **Why does `Frontend Retry with Exponential Backoff` connect `API Transport & Lock Contention` to `PWA Shell & Session Kernel`?**
+  _High betweenness centrality (0.020) - this node is a cross-community bridge._
+- **Are the 3 inferred relationships involving `doGet()` (e.g. with `registrarActividad_()` and `usuariosInactivos_()`) actually correct?**
+  _`doGet()` has 3 INFERRED edges - model-reasoned connections that need verification._
+- **What connects `CONFIG`, `timeZone`, `enabledAdvancedServices` to the rest of the system?**
+  _33 weakly-connected nodes found - possible documentation gaps or missing edges._
+- **Should `Catalog Search & Filter UI` be split into smaller, more focused modules?**
+  _Cohesion score 0.07676767676767676 - nodes in this community are weakly interconnected._
+- **Should `PWA Shell & Session Kernel` be split into smaller, more focused modules?**
+  _Cohesion score 0.11688311688311688 - nodes in this community are weakly interconnected._

@@ -20,7 +20,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="apple-mobile-web-app-title" content="Lista Fertrac">
 <title>Lista de Precios - Fertrac</title>
-<link rel="manifest" href="/lista-precios-fertrac/manifest.json?v=10.4.4">
+<link rel="manifest" href="/lista-precios-fertrac/manifest.json?v=10.4.5">
 <link rel="icon" type="image/png" href="/lista-precios-fertrac/logo.png">
 <link rel="apple-touch-icon" href="/lista-precios-fertrac/logo.png">
 <script src="capacitor.js" onerror="console.log('No Capacitor runtime')"></script>
@@ -36,7 +36,7 @@
   })();
 </script>
 
-<link rel="stylesheet" href="/lista-precios-fertrac/css/styles.css?v=10.4.4">
+<link rel="stylesheet" href="/lista-precios-fertrac/css/styles.css?v=10.4.5">
 </head>
 <body>
 
@@ -67,6 +67,9 @@
     </button>
     <div id="access-denied" style="display:none;background:#f8d7da;color:#721c24;border-radius:8px;padding:12px;font-size:0.85rem;margin-top:16px;">
       ⛔ Acceso denegado. Solo usuarios con correo @fertrac.com pueden acceder.
+    </div>
+    <div id="session-expired" style="display:none;background:#e2e3e5;color:#383d41;border-radius:8px;padding:12px;font-size:0.85rem;margin-top:16px;">
+      🔒 Tu sesión se cerró por inactividad. Vuelve a iniciar sesión para continuar.
     </div>
     <div id="login-offline" style="display:none;background:#fff3cd;color:#856404;border-radius:8px;padding:12px;font-size:0.85rem;margin-top:16px;">
       📵 Sin conexión. Conéctate a internet para iniciar sesión la primera vez; después la app funciona sin conexión.
@@ -139,15 +142,15 @@
   </div>
 </main>
 
-<script src="/lista-precios-fertrac/js/config.js?v=10.4.4"></script>
+<script src="/lista-precios-fertrac/js/config.js?v=10.4.5"></script>
 <!-- FASE 1: núcleo MVC (Singletons + Observer) — deben cargar antes de auth/catalog -->
-<script src="/lista-precios-fertrac/js/core/store.js?v=10.4.4"></script>
-<script src="/lista-precios-fertrac/js/core/platform.js?v=10.4.4"></script>
-<script src="/lista-precios-fertrac/js/core/queue.js?v=10.4.4"></script>
-<script src="/lista-precios-fertrac/js/core/api.js?v=10.4.4"></script>
-<script src="/lista-precios-fertrac/js/core/session.js?v=10.4.4"></script>
-<script src="/lista-precios-fertrac/js/auth.js?v=10.4.4"></script>
-<script src="/lista-precios-fertrac/js/catalog.js?v=10.4.4"></script>
+<script src="/lista-precios-fertrac/js/core/store.js?v=10.4.5"></script>
+<script src="/lista-precios-fertrac/js/core/platform.js?v=10.4.5"></script>
+<script src="/lista-precios-fertrac/js/core/queue.js?v=10.4.5"></script>
+<script src="/lista-precios-fertrac/js/core/api.js?v=10.4.5"></script>
+<script src="/lista-precios-fertrac/js/core/session.js?v=10.4.5"></script>
+<script src="/lista-precios-fertrac/js/auth.js?v=10.4.5"></script>
+<script src="/lista-precios-fertrac/js/catalog.js?v=10.4.5"></script>
 <!-- iOS INSTALL BANNER -->
 <div id="ios-install-banner">
   <span style="font-size:1.6rem">📲</span>

@@ -18,6 +18,62 @@ function gaMarcarApertura(sub) {
   gtag('event', 'app_open', { canal: window.FT_CANAL });
 }
 
+// ════════════════════════════════════════════════════════════════════════
+// BLOQUEO POR INACTIVIDAD
+// La sesión (fertrac_user) no caducaba nunca: un dispositivo extraviado o
+// prestado daba acceso indefinido al catálogo y a los precios. Aquí se le
+// pone vencimiento por inactividad, midiendo contra `fertrac_last_active`,
+// que App.Session ya persiste en cada heartbeat/interacción y que sobrevive
+// a recargas y a que Android recicle la WebView.
+//
+// Política:
+//   • 8 h sin actividad  → exige volver a iniciar sesión.
+//   • Sin conexión el bloqueo se DIFIERE (si no, el asesor en bodega o en
+//     zona sin cobertura se queda sin catálogo y sin poder loguearse).
+//   • 24 h sin actividad → bloquea aunque esté offline. Cierra el bypass de
+//     "pongo el equipo en modo avión y la sesión no vence nunca"; el
+//     desbloqueo exige red, que es justo lo que se quiere en ese escenario.
+//
+// El catálogo cacheado (fertrac_data) NO se borra: esto es un re-login, no
+// una revocación. Tras autenticarse el asesor sigue con su copia offline.
+// ════════════════════════════════════════════════════════════════════════
+const SESION_MAX_INACTIVA_MS  = 8  * 60 * 60 * 1000;   // 8 h  — umbral normal
+const SESION_TOPE_OFFLINE_MS  = 24 * 60 * 60 * 1000;   // 24 h — tope absoluto
+
+function _msSinActividad() {
+  const t = parseInt(localStorage.getItem('fertrac_last_active') || '0', 10);
+  if (!t) return 0;                      // sin marca previa → no castigar
+  const d = Date.now() - t;
+  return d > 0 ? d : 0;                  // reloj hacia atrás → tratar como 0
+}
+
+function bloquearPorInactividad() {
+  App.Store.notify('session.expired', {
+    email: userEmail,
+    platform: App.Platform.label,
+    offline: !navigator.onLine
+  });
+  clearToken();
+  localStorage.removeItem('fertrac_user');
+  localStorage.removeItem('fertrac_last_active');
+  userEmail = null;
+  App.Store.clear();                     // solo memoria; fertrac_data se conserva
+  document.getElementById('app-content').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+  const aviso = document.getElementById('session-expired');
+  if (aviso) aviso.style.display = 'block';
+}
+
+// Devuelve true si bloqueó (el llamador debe abortar su flujo normal).
+function evaluarInactividad() {
+  if (!userEmail) return false;                       // ya está en el login
+  const idle = _msSinActividad();
+  if (idle < SESION_MAX_INACTIVA_MS) return false;
+  if (!navigator.onLine && idle < SESION_TOPE_OFFLINE_MS) return false;
+  bloquearPorInactividad();
+  return true;
+}
+
 async function loginWithGoogle() {
   document.getElementById('login-loading').style.display = 'block';
 
@@ -142,11 +198,16 @@ function checkAuth() {
   const saved = localStorage.getItem('fertrac_user');
   if (saved && saved.endsWith('@' + ALLOWED_DOMAIN)) {
     userEmail = saved;
-    // GA4: apertura con sesión ya guardada — el caso más frecuente del día a día.
-    gaMarcarApertura(localStorage.getItem('fertrac_uid'));
-    showApp();
-    bootstrapToken();   // FASE 2: si no hay token, intenta conseguir uno en silencio
-    return;
+    // Vencimiento por inactividad. Si bloquea, NO se hace return: el flujo
+    // sigue hacia abajo para que, estando sin conexión, se pinte el aviso y
+    // se deshabilite el botón de login igual que en un arranque sin sesión.
+    if (!evaluarInactividad()) {
+      // GA4: apertura con sesión ya guardada — el caso más frecuente del día a día.
+      gaMarcarApertura(localStorage.getItem('fertrac_uid'));
+      showApp();
+      bootstrapToken();   // FASE 2: si no hay token, intenta conseguir uno en silencio
+      return;
+    }
   }
   // FASE 4: sin sesión guardada y sin red → el login de Google es imposible;
   // avisar y deshabilitar el botón hasta que vuelva la conexión.
@@ -187,6 +248,25 @@ function cerrarSesion() {
 }
 
 window.onload = function() { checkAuth(); };
+
+// ── Vigilancia de la inactividad en caliente ────────────────────────────────
+// Tres disparadores, porque ninguno cubre solo todos los casos:
+//   1) Sondeo cada minuto: el equipo queda abierto y desatendido sobre un
+//      escritorio. Barato — App.Session deja de refrescar `fertrac_last_active`
+//      tras 5 min de inactividad, así que el contador sí avanza.
+//   2) Vuelta a primer plano: el caso real del celular guardado en el bolsillo.
+//      Este listener se registra al cargar auth.js, antes de que App.Session
+//      instale el suyo (initApp → App.Session.start(), en catalog.js), de modo
+//      que se evalúa ANTES de que su touch() refresque la marca de tiempo. Si
+//      se invirtiera el orden, volver a la app renovaría la sesión por sí solo
+//      y el bloqueo no dispararía nunca.
+//   3) Recuperación de red: materializa el bloqueo que se difirió estando
+//      offline, en el instante en que vuelve a haber conexión para loguearse.
+document.addEventListener('visibilitychange', function () {
+  if (document.visibilityState === 'visible') evaluarInactividad();
+});
+window.addEventListener('online', function () { evaluarInactividad(); });
+setInterval(evaluarInactividad, 60000);
 
 // ════════════════════════════════════════════════════════════════════════
 // FASE 2 — AUTH: token con respaldo en la llave (token-first, key-fallback)
