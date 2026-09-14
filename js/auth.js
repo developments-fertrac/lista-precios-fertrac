@@ -7,6 +7,17 @@ let userEmail = null;
 // FASE 1: detección de plataforma centralizada (App.Platform singleton)
 const isNativeApp = window.App.Platform.isNativeApp;
 
+// ── GA4: apertura de app ────────────────────────────────────────────────────
+// Identifica al asesor por el 'sub' de Google (identificador opaco y estable),
+// nunca por el correo. Deduplica el mismo asesor entre APK, PWA y navegador.
+// Se llama en las tres rutas de entrada: login nativo, login web y sesión
+// restaurada desde localStorage (que es la apertura del día a día).
+function gaMarcarApertura(sub) {
+  if (!sub || typeof gtag !== 'function') return;
+  gtag('set', { user_id: sub });
+  gtag('event', 'app_open', { canal: window.FT_CANAL });
+}
+
 async function loginWithGoogle() {
   document.getElementById('login-loading').style.display = 'block';
 
@@ -28,13 +39,17 @@ async function loginWithGoogle() {
       const result = await plugin.signIn();
       const email = result && (result.email || (result.authentication && result.authentication.idToken));
 
-      // Obtener email del resultado
-      let userEmailResult = result.email || '';
-      if (!userEmailResult && result.authentication) {
-        // Decodificar el idToken para obtener el email
-        const payload = JSON.parse(atob(result.authentication.idToken.split('.')[1]));
-        userEmailResult = payload.email || '';
+      // GA4: el idToken se decodifica SIEMPRE (antes solo si faltaba el email),
+      // porque de ahí sale el 'sub' que identifica al asesor en GA4.
+      let payload = {};
+      if (result.authentication && result.authentication.idToken) {
+        try {
+          payload = JSON.parse(atob(result.authentication.idToken.split('.')[1])) || {};
+        } catch (e) { payload = {}; }
       }
+
+      // Obtener email del resultado
+      let userEmailResult = result.email || payload.email || '';
 
       if (userEmailResult && userEmailResult.endsWith('@' + ALLOWED_DOMAIN)) {
         userEmail = userEmailResult;
@@ -45,6 +60,10 @@ async function loginWithGoogle() {
         }
         pingMigracion();   // FASE 2: avisa (una vez) que este dispositivo quedó configurado
         App.Session.recordLogin(userEmailResult);
+        // GA4: persistir el 'sub' para poder marcar aperturas sin re-login.
+        const gaSub = payload.sub || result.id || '';
+        if (gaSub) localStorage.setItem('fertrac_uid', gaSub);
+        gaMarcarApertura(gaSub);
         showApp();
       } else {
         document.getElementById('login-loading').style.display = 'none';
@@ -92,6 +111,9 @@ function handleOAuthCallback() {
         localStorage.setItem('fertrac_user', email);
         pingMigracion();   // FASE 2: avisa (una vez) que este dispositivo quedó configurado
         App.Session.recordLogin(email);
+        // GA4: 'sub' del endpoint userinfo (v3) → persistir e informar apertura.
+        if (info.sub) localStorage.setItem('fertrac_uid', info.sub);
+        gaMarcarApertura(info.sub);
         window.location.hash = '';
         showApp();
       } else {
@@ -120,6 +142,8 @@ function checkAuth() {
   const saved = localStorage.getItem('fertrac_user');
   if (saved && saved.endsWith('@' + ALLOWED_DOMAIN)) {
     userEmail = saved;
+    // GA4: apertura con sesión ya guardada — el caso más frecuente del día a día.
+    gaMarcarApertura(localStorage.getItem('fertrac_uid'));
     showApp();
     bootstrapToken();   // FASE 2: si no hay token, intenta conseguir uno en silencio
     return;

@@ -64,6 +64,9 @@ function obtenerUrlImagen(valor) {
  * limpia CACHE completamente y guarda los nuevos registros.
  */
 function recolectarUrlsYGuardarCache() {
+  // ⚠️ LOCK GLOBAL (docs/LOCK_APPS_SCRIPT.md): job pesado (limpia y reescribe
+  // CACHE). Mientras corre bloquea la hoja y las lecturas de la app responden
+  // 'temporalmente_ocupado' (falla la sincronización).
   const lock = LockService.getScriptLock();
   if (!lock.tryLock(60000)) {
     console.log("🔒 Lock en uso — omitiendo");
@@ -156,6 +159,9 @@ function recolectarUrlsYGuardarCache() {
  *   4. Completar FOTO_URL_DRIVE con la URL del archivo
  */
 function sincronizarNuevasReferencias() {
+  // ⚠️ LOCK GLOBAL (docs/LOCK_APPS_SCRIPT.md): job de descarga+escritura;
+  // mientras corre bloquea la hoja y las lecturas de la app responden
+  // 'temporalmente_ocupado' (falla la sincronización).
   const lock = LockService.getScriptLock();
   if (!lock.tryLock(60000)) {
     console.log("🔒 Lock en uso — omitiendo");
@@ -316,6 +322,9 @@ function sincronizarNuevasReferencias() {
  * URL de Drive en CACHE columna C (FOTO_URL_DRIVE).
  */
 function descargarFotosWebp() {
+  // ⚠️ LOCK GLOBAL (docs/LOCK_APPS_SCRIPT.md): descarga masiva webp a Drive
+  // (puede tardar MINUTOS). Mientras corre bloquea la hoja y las lecturas de
+  // la app responden 'temporalmente_ocupado' (falla la sincronización).
   const lock = LockService.getScriptLock();
   if (!lock.tryLock(CONFIG.FOTOS_MAX_MS)) {
     console.log("🔒 Lock en uso — omitiendo");
@@ -449,6 +458,9 @@ const NUEVAS_CACHE_KEY = "sincronizar_nuevas_fila";
  * y guarda en Drive.
  */
 function procesarPendientesDrive() {
+  // ⚠️ LOCK GLOBAL (docs/LOCK_APPS_SCRIPT.md): descarga por lotes (puede
+  // tardar MINUTOS). Mientras corre bloquea la hoja y las lecturas de la app
+  // responden 'temporalmente_ocupado' (falla la sincronización).
   const lock = LockService.getScriptLock();
   if (!lock.tryLock(CONFIG.FOTOS_MAX_MS)) {
     console.log("🔒 Lock en uso — omitiendo");
@@ -819,6 +831,9 @@ function _descargarWebp_(url, nombre) {
  * BITACORA_FOTOS. Pensada para ejecutarse manual o por trigger.
  */
 function actualizarFotosConError() {
+  // ⚠️ LOCK GLOBAL (docs/LOCK_APPS_SCRIPT.md): job de re-descarga; mientras
+  // corre bloquea la hoja y las lecturas de la app responden
+  // 'temporalmente_ocupado' (falla la sincronización).
   const lock = LockService.getScriptLock();
   if (!lock.tryLock(CONFIG.FOTOS_MAX_MS)) {
     console.log("🔒 Lock en uso — omitiendo");
@@ -1015,6 +1030,9 @@ function actualizarFotosConError() {
  * ni validar contra LISTA DE PRECIOS. Reintenta y valida integridad.
  */
 function revalidarErroresCache() {
+  // ⚠️ LOCK GLOBAL (docs/LOCK_APPS_SCRIPT.md): job de revalidación; mientras
+  // corre bloquea la hoja y las lecturas de la app responden
+  // 'temporalmente_ocupado' (falla la sincronización).
   const lock = LockService.getScriptLock();
   if (!lock.tryLock(CONFIG.FOTOS_MAX_MS)) {
     console.log("🔒 Lock en uso — omitiendo");

@@ -29,8 +29,8 @@ window.App = window.App || {};
     isPWA: isStandalone,
     isIOS: isIOS,
     isAndroid: isAndroid
-    
   };
 
+  // GA4: canal de consumo expuesto como global para los eventos de gtag.
   window.FT_CANAL = label;
 })(window);

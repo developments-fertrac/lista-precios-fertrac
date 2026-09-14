@@ -18,6 +18,9 @@ function sincronizarListaABaseMotor() {
     return;
   }
 
+  // ⚠️ LOCK GLOBAL (docs/LOCK_APPS_SCRIPT.md): mientras ESTA sync se ejecuta,
+  // la hoja queda bloqueada para otros y la app responde 'temporalmente_ocupado'
+  // (falla la sincronización hasta que termina). La app reintenta sola.
   const lock = LockService.getScriptLock();
   if (!lock.tryLock(10000)) {
     console.log("🔒 Otra ejecución en curso — omitiendo");
@@ -49,6 +52,9 @@ function sincronizacionCompleta(ignorarHorario) {
 
   const enviarCorreo = hora === 7 || hora === 12 || hora === 19;
 
+  // ⚠️ LOCK GLOBAL (docs/LOCK_APPS_SCRIPT.md): mientras ESTA sync se ejecuta,
+  // la hoja queda bloqueada para otros y la app responde 'temporalmente_ocupado'
+  // (falla la sincronización hasta que termina). La app reintenta sola.
   const lock = LockService.getScriptLock();
   if (!lock.tryLock(10000)) {
     console.log("🔒 Otra ejecución en curso — omitiendo");
@@ -74,6 +80,8 @@ function sincronizacionCompleta(ignorarHorario) {
 
 // ── Funciones de prueba ──
 function probarDiurna() {
+  // ⚠️ LOCK GLOBAL (docs/LOCK_APPS_SCRIPT.md): job de prueba; mientras corre,
+  // bloquea la hoja y fallan las lecturas de la app ('temporalmente_ocupado').
   const lock = LockService.getScriptLock();
   if (!lock.tryLock(10000)) {
     console.log("🔒 Otra ejecución en curso — omitiendo");
@@ -87,6 +95,8 @@ function probarDiurna() {
 }
 
 function probarCompleta() {
+  // ⚠️ LOCK GLOBAL (docs/LOCK_APPS_SCRIPT.md): job de prueba; mientras corre,
+  // bloquea la hoja y fallan las lecturas de la app ('temporalmente_ocupado').
   const lock = LockService.getScriptLock();
   if (!lock.tryLock(10000)) {
     console.log("🔒 Otra ejecución en curso — omitiendo");

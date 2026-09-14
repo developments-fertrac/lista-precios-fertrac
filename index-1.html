@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-B9L40ZXFQY"></script>
+<script src="https://app.secureprivacy.ai/script/6aa41d4214671a86a000257b.js" defer></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-B9L40ZXFQY');
+</script>
+    <!-- Google tag (gtag.js) -->
+<meta charset="UTF-8">
+<meta name="theme-color" content="#1a5c2a">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-title" content="Lista Fertrac">
+<title>Lista de Precios - Fertrac</title>
+<link rel="manifest" href="/lista-precios-fertrac/manifest.json?v=10.4.3">
+<link rel="icon" type="image/png" href="/lista-precios-fertrac/logo.png">
+<link rel="apple-touch-icon" href="/lista-precios-fertrac/logo.png">
+<script src="capacitor.js" onerror="console.log('No Capacitor runtime')"></script>
+<!-- FASE 2 (rev): guarda para el iframe de renovación silenciosa de token.
+     Cuando el iframe oculto cae con #access_token en la URL, corta la carga
+     de la app aquí dentro (no arranca la app dos veces) y el padre recoge
+     el token. -->
+<script>
+  (function () {
+    try {
+      if (window.self !== window.top) window.stop();
+    } catch (e) { /* acceso a window.top bloqueado → asumir iframe */ window.stop(); }
+  })();
+</script>
+
+<link rel="stylesheet" href="/lista-precios-fertrac/css/styles.css?v=10.4.3">
+</head>
+<body>
+
+<!-- LOGIN SCREEN -->
+<div id="login-screen">
+  <div class="login-card">
+    <img src="https://raw.githubusercontent.com/developments-fertrac/lista-precios-fertrac/main/logo.png"
+         alt="Fertrac" class="login-logo"
+         onerror="this.style.display='none'">
+    <h2>Lista de Precios</h2>
+    <p>Inicia sesión con tu cuenta corporativa de Fertrac para continuar</p>
+    <button onclick="loginWithGoogle()" style="
+      display:flex;align-items:center;justify-content:center;gap:12px;
+      width:100%;max-width:280px;margin:0 auto;
+      padding:12px 20px;
+      background:white;color:#333;
+      border:1.5px solid #ddd;border-radius:8px;
+      font-size:0.95rem;font-weight:500;
+      cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,0.1);
+      transition:box-shadow 0.2s;">
+      <svg width="20" height="20" viewBox="0 0 48 48">
+        <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+        <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+        <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+        <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+      </svg>
+      Iniciar sesión con Google
+    </button>
+    <div id="access-denied" style="display:none;background:#f8d7da;color:#721c24;border-radius:8px;padding:12px;font-size:0.85rem;margin-top:16px;">
+      ⛔ Acceso denegado. Solo usuarios con correo @fertrac.com pueden acceder.
+    </div>
+    <div id="login-offline" style="display:none;background:#fff3cd;color:#856404;border-radius:8px;padding:12px;font-size:0.85rem;margin-top:16px;">
+      📵 Sin conexión. Conéctate a internet para iniciar sesión la primera vez; después la app funciona sin conexión.
+    </div>
+    <div id="login-loading" style="display:none;margin-top:16px;font-size:0.85rem;color:#888;">
+      🔄 Verificando...
+    </div>
+  </div>
+</div>
+
+<!-- APP CONTENT -->
+<div id="app-content">
+<header>
+  <div style="display:flex;align-items:center;gap:14px">
+    <img src="https://raw.githubusercontent.com/developments-fertrac/lista-precios-fertrac/main/logo.png"
+         alt="Fertrac" style="height:40px;object-fit:contain"
+         onerror="this.style.display='none'">
+    <span class="header-title">Lista de Precios</span>
+  </div>
+  <div style="display:flex;align-items:center;gap:10px">
+    <span id="sync-status" style="font-size:0.72rem;color:#aaa"></span>
+    <button id="sync-btn" onclick="syncData()">🔄 Sincronizar</button>
+    <button id="logout-btn" onclick="cerrarSesion()" title="Cerrar sesión">Salir</button>
+  </div>
+</header>
+
+<!-- GO TOP BUTTON -->
+<button id="go-top-btn" onclick="goTop()">↑ Ir arriba</button>
+
+<div class="offline-banner" id="offline-banner">
+  📵 Sin conexión — mostrando datos guardados
+</div>
+
+<main>
+
+  <div class="instructions">
+    <strong>📋 Cómo usar:</strong>
+    1. Escribe una palabra clave o referencia en el buscador.<br>
+    2. Usa los filtros para refinar resultados.<br>
+    3. Toca un producto para ver el detalle completo.
+  </div>
+
+  <div class="search-box">
+    <div class="search-row">
+      <input type="text" id="search-input" placeholder="🔍 Buscar por referencia, producto, marca...">
+      <button id="clear-btn" onclick="clearAll()">🧹 Limpiar</button>
+    </div>
+    <div class="filters-grid" id="filters-grid"></div>
+  </div>
+
+  <div class="results-meta" id="results-meta"></div>
+
+  <div class="table-wrapper" id="table-wrapper">
+    <div class="empty-state">Cargando datos...</div>
+  </div>
+
+  <div class="detail-panel" id="detail-panel">
+    <div class="detail-header">
+      <div class="detail-title-group">
+        <h2 id="detail-title">Detalle del producto</h2>
+        <!-- INICIO: Logo Fertrac en el banner de detalle (agregado por Claude) -->
+        <img src="https://raw.githubusercontent.com/developments-fertrac/lista-precios-fertrac/main/logo2.png"
+             alt="Fertrac" class="detail-header-logo"
+             onerror="this.style.display='none'">
+        <!-- FIN: Logo Fertrac en el banner de detalle -->
+      </div>
+      <button class="close-btn" onclick="closeDetail()">✕</button>
+    </div>
+    <div class="detail-body" id="detail-body"></div>
+  </div>
+</main>
+
+<script src="/lista-precios-fertrac/js/config.js?v=10.4.3"></script>
+<!-- FASE 1: núcleo MVC (Singletons + Observer) — deben cargar antes de auth/catalog -->
+<script src="/lista-precios-fertrac/js/core/store.js?v=10.4.3"></script>
+<script src="/lista-precios-fertrac/js/core/platform.js?v=10.4.3"></script>
+<script src="/lista-precios-fertrac/js/core/queue.js?v=10.4.3"></script>
+<script src="/lista-precios-fertrac/js/core/api.js?v=10.4.3"></script>
+<script src="/lista-precios-fertrac/js/core/session.js?v=10.4.3"></script>
+<script src="/lista-precios-fertrac/js/auth.js?v=10.4.3"></script>
+<script src="/lista-precios-fertrac/js/catalog.js?v=10.4.3"></script>
+<!-- iOS INSTALL BANNER -->
+<div id="ios-install-banner">
+  <span style="font-size:1.6rem">📲</span>
+  <div class="ios-banner-text">
+    <strong>Instala la app en tu iPhone</strong>
+    Toca <strong>⎙</strong> (compartir) y luego <strong>"Añadir a pantalla de inicio"</strong>
+  </div>
+  <button id="ios-banner-close" onclick="dismissIosBanner()">✕</button>
+</div>
+</div><!-- end app-content -->
+
+<!-- IMAGE MODAL -->
+<div id="img-modal" style="
+  display:none;position:fixed;inset:0;z-index:999;
+  background:rgba(0,0,0,0.75);
+  align-items:center;justify-content:center;padding:20px;">
+  <div id="img-modal-inner" onclick="event.stopPropagation()" style="
+    background:white;border-radius:14px;padding:16px;
+    display:flex;flex-direction:column;align-items:center;gap:12px;
+    max-width:95vw;max-height:95vh;box-shadow:0 8px 40px rgba(0,0,0,0.3);">
+    <img id="img-modal-src" style="max-width:100%;max-height:75vh;border-radius:8px;object-fit:contain;background:white;">
+    <div style="display:flex;gap:10px;">
+      <a id="img-download-btn" href="#" download="producto.jpg" style="
+        background:#F47920;color:white;border:none;border-radius:8px;
+        padding:9px 20px;font-size:0.88rem;font-weight:700;
+        cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:6px;">
+        ⬇️ Descargar foto
+      </a>
+      <button onclick="closeModal()" style="
+        background:#eee;color:#333;border:none;border-radius:8px;
+        padding:9px 16px;font-size:0.88rem;cursor:pointer;">
+        ✕ Cerrar
+      </button>
+    </div>
+  </div>
+  <div onclick="closeModal()" style="position:fixed;inset:0;z-index:-1;"></div>
+</div>
+</body>
+</html>
+

@@ -36,6 +36,10 @@ function aplicarClasificacionManual(filaInicioClasif) {
 }
 
 function _ejecutarClasificacionConLock_(simular, filaInicioClasif) {
+  // ⚠️ LOCK GLOBAL (docs/LOCK_APPS_SCRIPT.md): job pesado de escritura (E,F,G,I);
+  // mientras corre bloquea la hoja y las lecturas de la app responden
+  // 'temporalmente_ocupado' (falla la sincronización). Programarla fuera del
+  // horario de demanda.
   const lock = LockService.getScriptLock();
   if (!lock.tryLock(30000)) {
     console.log("🔒 Otra ejecución en curso — omitiendo");

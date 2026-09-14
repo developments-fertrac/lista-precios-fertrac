@@ -124,6 +124,10 @@ function obtenerDatosListaCacheados_() {
     try { return { ok: true, data: JSON.parse(jsonCache).data || [] }; } catch (e) {}
   }
 
+  // ⚠️ LOCK GLOBAL (docs/LOCK_APPS_SCRIPT.md): la API comparte el MISMO lock
+  // que las sync/fotos. Si una de ellas lo sostiene, este READ responde
+  // 'temporalmente_ocupado' en ≤1.8s y la app reintenta (espera breve, única
+  // del sistema: no se lee a medias).
   const lock = LockService.getScriptLock();
   let tieneLock = false;
 

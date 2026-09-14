@@ -62,6 +62,8 @@ function eliminarTriggers() {
 }
 
 function liberarLock() {
+  // ⚠️ LOCK GLOBAL (docs/LOCK_APPS_SCRIPT.md): este es el DESBLOQUEO manual de
+  // emergencia (no bloquea: libera). Ejecutar si un job quedó colgado > 5 min.
   const lock = LockService.getScriptLock();
   lock.releaseLock();
   console.log("🔓 Lock liberado");
