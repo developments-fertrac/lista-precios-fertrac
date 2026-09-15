@@ -3,7 +3,7 @@ const V = 'v=10.4.5';
 
 // Fase 4: caché runtime de imágenes (thumbnails de Drive) — independiente del
 // precache: un bump de versión no borra las fotos ya descargadas.
-const RT_IMG_CACHE = 'fertrac-imgs-v1';
+const RT_IMG_CACHE = 'fertrac-imgs-v2';
 const RT_IMG_MAX = 200;
 
 async function responderImagenRuntime(req) {

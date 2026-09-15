@@ -873,7 +873,7 @@ function showDetail(ref, keepScroll = false) {
 
   const fileId = extractDriveId(r[C.FOTO]);
   const imgHtml = fileId
-    ? '<img id="detail-img" class="product-image" alt="Foto producto" onclick="openModal(this)" style="cursor:zoom-in" fetchpriority="high">'
+    ? '<img id="detail-img" class="product-image" alt="Foto producto" onclick="openModal(this)" style="cursor:zoom-in" fetchpriority="high" referrerpolicy="no-referrer" onerror="this.outerHTML=\'<div class=&quot;no-image&quot;>Sin imagen</div>\'">'
     : '<div class="no-image">Sin imagen</div>';
 
   document.getElementById('detail-title').textContent = r[C.REF] || 'Detalle';
