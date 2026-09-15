@@ -244,7 +244,7 @@ function cerrarSesion() {
   clearToken();
   localStorage.removeItem('fertrac_user');
   userEmail = null;
-  location.reload();
+  location.replace(location.pathname);
 }
 
 window.onload = function() { checkAuth(); };
