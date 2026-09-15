@@ -657,6 +657,172 @@ function invalidarCacheFotos_() {
 }
 
 // ============================================================
+// CARGA DE IMAGEN POR REFERENCIA — Procesa UNA ref puntual
+// ============================================================
+
+/**
+ * Carga (procesa) la imagen de UNA referencia específica y devuelve la URL
+ * de Drive lista para servir al frontend.
+ * Ej.: CargarRefSolicitada("103705")
+ *
+ * Flujo:
+ *   1. Si la ref ya está en CACHE con FOTO_URL_DRIVE y sin ERROR → la devuelve.
+ *   2. Si no → cruza con LISTA DE PRECIOS para obtener la URL de imagen,
+ *      la descarga/convierte a WEBP, la guarda en FOLDER_ID, actualiza CACHE
+ *      y devuelve la nueva URL de Drive.
+ *   3. Si no hay imagen en LISTA DE PRECIOS → marca ERROR=1 en CACHE y devuelve null.
+ *
+ * @param {string} referencia - Código de referencia (ej. "103705").
+ * @return {string|null} URL de Drive de la foto, o null si no se pudo obtener.
+ */
+function CargarRefSolicitada(referencia) {
+  const ref = String(referencia || "").trim().toUpperCase();
+  if (!ref) {
+    console.log("⚠️ CargarRefSolicitada — referencia vacía");
+    return null;
+  }
+
+  // ⚠️ LOCK GLOBAL (docs/LOCK_APPS_SCRIPT.md): descarga+escritura puntual;
+  // mientras corre bloquea la hoja y las lecturas de la app responden
+  // 'temporalmente_ocupado'. Al ser una sola ref, la ventana es corta.
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(60000)) {
+    console.log("🔒 Lock en uso — reintenta en unos segundos");
+    return null;
+  }
+
+  try {
+    const ssMotor = SpreadsheetApp.openById(CONFIG.ID_BASE_MOTOR);
+    const ssLista = SpreadsheetApp.openById(CONFIG.ID_LISTA_PRECIOS);
+    const shCache = _obtenerOCrearCache_(ssMotor);
+    const shLista = ssLista.getSheetByName(CONFIG.SHEET_LISTA);
+
+    // ── 1. Buscar la ref en CACHE ──
+    const cacheLast = shCache.getLastRow();
+    let cacheRow = -1;
+    let urlLista = "";
+    let urlDrive = "";
+    let conError = "";
+
+    if (cacheLast > 1) {
+      const data = shCache.getRange(2, 1, cacheLast - 1, CACHE_TOTAL_COLS).getValues();
+      for (let i = 0; i < data.length; i++) {
+        if (String(data[i][CACHE_COL_REF - 1] || "").trim().toUpperCase() === ref) {
+          cacheRow  = i + 2;
+          urlLista  = String(data[i][CACHE_COL_URL_LISTA - 1] || "").trim();
+          urlDrive  = String(data[i][CACHE_COL_URL_DRIVE - 1] || "").trim();
+          conError  = String(data[i][CACHE_COL_ERROR - 1] || "").trim();
+          break;
+        }
+      }
+    }
+
+    // Ya procesada y sin error → devolver la URL de Drive existente
+    if (cacheRow >= 0 && urlDrive && conError !== "1") {
+      console.log("✅ " + ref + " — ya en CACHE con Drive: " + urlDrive);
+      return urlDrive;
+    }
+
+    // ── 2. Buscar la URL de imagen en LISTA DE PRECIOS (la más reciente) ──
+    let url = urlLista;
+    const filaInicio = CONFIG.LISTA_DATA_ROW;
+    const lastLista  = shLista.getLastRow();
+    const totalLista = lastLista - filaInicio + 1;
+
+    if (totalLista > 0) {
+      const refsLista = shLista.getRange(filaInicio, CONFIG.LISTA_COL_REF, totalLista, 1).getDisplayValues();
+      const imgsLista = shLista.getRange(filaInicio, CONFIG.LISTA_COL_IMG, totalLista, 1).getValues();
+      for (let i = 0; i < totalLista; i++) {
+        if (String(refsLista[i][0] || "").trim().toUpperCase() === ref) {
+          const urlNueva = obtenerUrlImagen(imgsLista[i][0]);
+          if (urlNueva) url = urlNueva;
+          break;
+        }
+      }
+    }
+
+    if (!url) {
+      console.log("⚠️ " + ref + " — sin imagen en LISTA DE PRECIOS");
+      if (cacheRow >= 0) {
+        shCache.getRange(cacheRow, CACHE_COL_ERROR).setValue(1);
+        shCache.getRange(cacheRow, CACHE_COL_DETALLE).setValue("Sin imagen en LISTA DE PRECIOS");
+      }
+      return null;
+    }
+
+    // ── 3. Si no existe en CACHE, agregar la fila ──
+    if (cacheRow < 0) {
+      cacheRow = shCache.getLastRow() + 1;
+      shCache.getRange(cacheRow, CACHE_COL_REF, 1, CACHE_TOTAL_COLS)
+        .setValues([[ref, url, "", new Date(), "", ""]]);
+    }
+
+    // ── 4. Descargar y convertir a WEBP ──
+    const folder      = DriveApp.getFolderById(CONFIG.FOLDER_ID);
+    const MAX_REINTENTOS = 2;
+    let archivoOK = false;
+    let detalle   = "";
+    let metodoOK  = "";
+    let intentoOK = "";
+    let urlNuevaDrive = null;
+
+    for (let intento = 1; intento <= MAX_REINTENTOS; intento++) {
+      const resultado = _descargarWebp_(url, ref + ".webp");
+
+      if (!resultado.ok) {
+        detalle = resultado.detalle;
+        console.log("   🔄 " + ref + " intento " + intento + "/" + MAX_REINTENTOS + " — " + detalle);
+        Utilities.sleep(500);
+        continue;
+      }
+
+      const blob = resultado.blob;
+
+      // Re-validar el blob ANTES de tocar Drive
+      if (!_esWebpValido_(blob.getBytes())) {
+        detalle = "Blob inválido en descarga — reintentando";
+        console.log("   🔄 " + ref + " intento " + intento + "/" + MAX_REINTENTOS + " — " + detalle);
+        continue;
+      }
+
+      const file  = _guardarEnCarpeta_(folder, ref + ".webp", blob);
+      urlNuevaDrive = "https://drive.google.com/file/d/" + file.getId() + "/view";
+
+      // Actualizar CACHE: URL de Drive + limpiar error
+      shCache.getRange(cacheRow, CACHE_COL_URL_DRIVE).setValue(urlNuevaDrive);
+      shCache.getRange(cacheRow, CACHE_COL_ERROR).setValue(200);   // procesada/OK
+      shCache.getRange(cacheRow, CACHE_COL_DETALLE).setValue("");
+
+      archivoOK = true;
+      metodoOK  = resultado.detalle;
+      intentoOK = String(intento);
+      _registrarBitacoraFotos_(ref, "OK", metodoOK, intentoOK);
+      console.log("✅ " + ref + " — foto en Drive (intento " + intento + ", " + resultado.detalle + "): " + urlNuevaDrive);
+      break;
+    }
+
+    if (!archivoOK) {
+      shCache.getRange(cacheRow, CACHE_COL_ERROR).setValue(1);
+      shCache.getRange(cacheRow, CACHE_COL_DETALLE).setValue(detalle || "Descarga falló");
+      _registrarBitacoraFotos_(ref, "ERROR", detalle || "Descarga falló", String(MAX_REINTENTOS));
+      console.log("❌ " + ref + " — falló tras " + MAX_REINTENTOS + " intentos: " + (detalle || "Descarga falló"));
+      return null;
+    }
+
+    // Nueva foto disponible → invalidar el caché que sirve el frontend
+    invalidarCacheFotos_();
+    return urlNuevaDrive;
+
+  } catch (e) {
+    registrarLog_('error', 'backend', 'fotos_cargar_ref', e.message, e.stack || '', ref, '');
+    console.log("❌ CargarRefSolicitada error:", e.message);
+    return null;
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+// ============================================================
 // HELPERS
 // ============================================================
 
