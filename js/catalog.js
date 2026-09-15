@@ -83,7 +83,7 @@ function saveData(data) {
   try {
     localStorage.setItem('fertrac_data', JSON.stringify(data));
     localStorage.setItem('fertrac_updated', new Date().toLocaleString('es-CO'));
-  } catch(e) { console.warn('Storage full', e); }
+  } catch(e) { console.warn('Storage full', e); App.Log.warn('storage', 'Storage lleno al guardar catálogo', String(e && e.stack || e), {}); }
 }
 function loadData() {
   try { const d = localStorage.getItem('fertrac_data'); return d ? JSON.parse(d) : null; }
@@ -109,7 +109,7 @@ function saveFotosCache(fotosMap) {
   try {
     localStorage.setItem(FOTOS_CACHE_DATA_KEY, JSON.stringify(fotosMap));
     localStorage.setItem(FOTOS_CACHE_EXP_KEY, String(_fotosCacheExp));
-  } catch(e) { console.warn('Storage full (fotos)', e); }
+  } catch(e) { console.warn('Storage full (fotos)', e); App.Log.warn('storage', 'Storage lleno al guardar fotos', String(e && e.stack || e), {}); }
 }
 
 function invalidateFotosCache() {
@@ -165,6 +165,7 @@ async function syncFotosCache() {
       return;
     }
     console.warn('Cache de fotos no actualizado:', e);
+    App.Log.warn('fotos', 'Cache de fotos no actualizado', String(e && e.stack || e), { code: e && e.code, online: navigator.onLine });
     // Cualquier otro fallo: re-intentar una vez en 90 s. Mientras tanto las
     // miniaturas caen a col B (fallback).
     if (!window._fotosRetryScheduled) {
@@ -248,6 +249,7 @@ async function syncData() {
     status.textContent = '⚠️ Error al sincronizar';
     btn.textContent = '🔄 Sincronizar';
     btn.disabled = false;
+    App.Log.error('sync', 'Error al sincronizar catálogo', String(e && e.stack || e), { code: e && e.code, online: navigator.onLine });
     const saved = loadData();
     if (saved && saved.length > 0) Store.setCatalog(saved);
     else document.getElementById('table-wrapper').innerHTML =
@@ -738,6 +740,20 @@ function extractDriveId(url) {
   return null;
 }
 
+// Asigna una imagen con reintento: si `primary` falla (ej. Drive responde 404
+// cuando el archivo es más pequeño que el tamaño pedido, sz=w800), cae a
+// `retry` (sz=w200). Si el reintento también falla, muestra el placeholder.
+function setImgWithRetry(imgElement, primary, retry) {
+  imgElement.onerror = function () {
+    if (retry && imgElement.src !== retry) {
+      imgElement.src = retry;
+      return;
+    }
+    imgElement.outerHTML = '<div class="no-image">Sin imagen</div>';
+  };
+  imgElement.src = primary;
+}
+
 async function loadImage(fileId, imgElement, referencia) {
   // Fase 4: si tenemos el mapa de fotos cacheado, resolver la URL de Drive
   // localmente y usarla directo → evita una llamada HTTP a la API por imagen.
@@ -749,9 +765,9 @@ async function loadImage(fileId, imgElement, referencia) {
     if (driveUrl && imgElement) {
       const cachedId = extractDriveId(driveUrl);
       if (cachedId) {
-        imgElement.src = thumbDriveURL(cachedId, 'w800');
+        setImgWithRetry(imgElement, thumbDriveURL(cachedId, 'w800'), thumbDriveURL(cachedId, 'w200'));
       } else {
-        imgElement.src = driveUrl;
+        setImgWithRetry(imgElement, driveUrl, null);
       }
       return;
     }
@@ -763,9 +779,9 @@ async function loadImage(fileId, imgElement, referencia) {
     // sin pasar por el proxy binario de Apps Script.
     const res = await App.ApiClient.getImg(fileId);
     if (res && res.kind === 'thumbnail' && res.url) {
-      imgElement.src = res.url;       // thumbnail de Google, descarga directa
+      setImgWithRetry(imgElement, res.url, thumbDriveURL(fileId, 'w200'));
     } else if (res && res.kind === 'data' && res.url && res.url.startsWith('data:')) {
-      imgElement.src = res.url;       // compat: formato viejo base64
+      setImgWithRetry(imgElement, res.url, null);
     } else {
       imgElement.style.display = 'none';
     }
@@ -1084,6 +1100,7 @@ async function autoRefresh() {
     if (status) status.textContent = '✅ Actualizado: ' + localStorage.getItem('fertrac_updated');
   } catch (e) {
     console.log('Auto-refresh falló (se conservan los datos previos):', e);
+    App.Log.warn('sync', 'Auto-refresh falló', String(e && e.stack || e), { code: e && e.code, online: navigator.onLine });
   }
 }
 

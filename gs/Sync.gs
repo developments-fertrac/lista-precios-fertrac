@@ -29,6 +29,9 @@ function sincronizarListaABaseMotor() {
 
   try {
     ejecutarDiurna_();
+  } catch (e) {
+    registrarLog_('error', 'backend', 'sync_diurna', e.message, e.stack || '', '', '');
+    console.log("❌ Error:", e.message);
   } finally {
     lock.releaseLock();
   }
@@ -64,6 +67,7 @@ function sincronizacionCompleta(ignorarHorario) {
   try {
     ejecutarCompleta_(enviarCorreo);
   } catch (e) {
+    registrarLog_('error', 'backend', 'sync_completa', e.message, e.stack || '', '', '');
     if (enviarCorreo) {
       const fecha = Utilities.formatDate(new Date(), "America/Bogota", "dd/MM/yyyy HH:mm");
       GmailApp.sendEmail(

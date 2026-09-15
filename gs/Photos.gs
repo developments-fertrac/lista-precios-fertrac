@@ -130,6 +130,9 @@ function recolectarUrlsYGuardarCache() {
                 " | Sin URL: " + vacias +
                 " | Total filas procesadas: " + totalRows);
 
+  } catch (e) {
+    registrarLog_('error', 'backend', 'fotos_recolectar', e.message, e.stack || '', '', '');
+    console.log("❌ Error:", e.message);
   } finally {
     lock.releaseLock();
   }
@@ -434,6 +437,9 @@ function descargarFotosWebp() {
                 " | Fallidas: " + fallidas +
                 " | Omitidas: " + omitidas);
 
+    if (fallidas > 0) {
+      registrarLog_('warn', 'backend', 'fotos_descarga', 'Descarga WEBP con fallidas: ' + fallidas, '', 'Guardadas ' + guardadas + ' / omitidas ' + omitidas, '');
+    }
   } finally {
     lock.releaseLock();
   }
@@ -589,6 +595,9 @@ function procesarPendientesDrive() {
                   "s | Pendientes restantes: " + (pendientes.length - hasta));
     }
 
+    if (fallidas > 0) {
+      registrarLog_('warn', 'backend', 'fotos_pendientes', 'Procesado de pendientes con fallidas: ' + fallidas, '', 'Procesadas ' + procesadas + ' / guardadas ' + guardadas, '');
+    }
   } finally {
     lock.releaseLock();
   }
@@ -1015,6 +1024,9 @@ function actualizarFotosConError() {
                 " | Persisten: " + persisten +
                 " | Sin imagen (error limpiado): " + sinUrl);
 
+    if (persisten > 0) {
+      registrarLog_('warn', 'backend', 'fotos_errores', 'Fotos con error que persisten: ' + persisten, '', 'Corregidas ' + corregidas + ' / sin imagen ' + sinUrl, '');
+    }
   } finally {
     lock.releaseLock();
   }
@@ -1138,6 +1150,9 @@ function revalidarErroresCache() {
     console.log("✅ Revalidación | Corregidas: " + corregidas +
                 " | Persisten: " + persisten);
 
+    if (persisten > 0) {
+      registrarLog_('warn', 'backend', 'fotos_revalidar', 'Revalidación con errores persistentes: ' + persisten, '', 'Corregidas ' + corregidas, '');
+    }
   } finally {
     lock.releaseLock();
   }

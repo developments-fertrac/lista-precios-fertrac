@@ -1,5 +1,5 @@
-const CACHE = 'fertrac-v10.4.5';
-const V = 'v=10.4.5';
+const CACHE = 'fertrac-v10.4.6';
+const V = 'v=10.4.6';
 
 // Fase 4: caché runtime de imágenes (thumbnails de Drive) — independiente del
 // precache: un bump de versión no borra las fotos ya descargadas.
@@ -54,6 +54,7 @@ self.addEventListener('install', e => {
       '/lista-precios-fertrac/js/core/queue.js?' + V,
       '/lista-precios-fertrac/js/core/api.js?' + V,
       '/lista-precios-fertrac/js/core/session.js?' + V,
+      '/lista-precios-fertrac/js/core/log.js?' + V,
       '/lista-precios-fertrac/js/auth.js?' + V,
       '/lista-precios-fertrac/js/catalog.js?' + V,
       '/lista-precios-fertrac/manifest.json?' + V

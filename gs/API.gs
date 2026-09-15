@@ -17,6 +17,14 @@ const API_TTL_VERIF  = 1500;                 // segundos (25 min) de vigencia de
 function doGet(e) {
   const params = (e && e.parameter) || {};
 
+  // ── 0. Log de errores de la app (?log=1) ──
+  // Va ANTES de la autorización a propósito: así un error de auth
+  // (token_invalido/no_autorizado) también puede registrarse en Log App.
+  // logDesdeApi_ valida la llave/token por su cuenta y nunca rompe el API.
+  if (params.log === "1") {
+    return logDesdeApi_(params);
+  }
+
   // ── 1. Autorización ──
   // estado: 'ok' | 'token_invalido' | 'no_autorizado' | 'sin_credenciales'
   let estado;

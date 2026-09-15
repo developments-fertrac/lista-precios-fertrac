@@ -47,6 +47,9 @@ function _ejecutarClasificacionConLock_(simular, filaInicioClasif) {
   }
   try {
     aplicarClasificacion_(simular, filaInicioClasif);
+  } catch (e) {
+    registrarLog_('error', 'backend', 'clasificacion', e.message, e.stack || '', simular ? 'simulacion' : '', '');
+    console.log("❌ Error:", e.message);
   } finally {
     lock.releaseLock();
   }

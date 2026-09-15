@@ -20,6 +20,10 @@ const CONFIG = {
   SHEET_CONFLICTOS: "CONFLICTOS CLASIFICACION",
   SHEET_PENDIENTES: "PENDIENTES SIN HOJA2",
   SHEET_ACTIVIDAD:  "ACTIVIDAD_USUARIOS",
+  SHEET_LOG:        "Log App",
+
+  // ── Log de errores (Log App) ──
+  LOG_TTL_DEDUPE:   3600,   // segundos: no repetir el mismo error (módulo+mensaje) en la hoja
 
   // ── Seguimiento de actividad (Fase 3) ──
   ACTIVIDAD_TTL_HEARTBEAT: 3600,   // throttle: 1 log de heartbeat por usuario/hora

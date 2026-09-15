@@ -127,6 +127,7 @@ async function loginWithGoogle() {
       }
     } catch(e) {
       console.error('Error login nativo:', e);
+      App.Log.warn('auth', 'Login nativo falló — fallback a web', String(e && e.stack || e), {});
       document.getElementById('login-loading').style.display = 'none';
       // Fallback al login web si falla el nativo
       loginWithGoogleWeb();
@@ -331,6 +332,7 @@ async function renovarTokenSilencioso() {
 
 // ── "No autorizado" explícito del servidor: borra caché y exige re-login ──
 function manejarNoAutorizado() {
+  App.Log.error('auth', 'Acceso revocado (no_autorizado)', '', { email: userEmail || '', online: navigator.onLine });
   try {
     localStorage.removeItem('fertrac_data');
     localStorage.removeItem('fertrac_updated');
@@ -468,6 +470,7 @@ async function apiRequest(modo, fileId, extra) {
 
   const err = new Error(resK.code || 'error');
   err.code = resK.code || 'error';
+  App.Log.error('api', 'Solicitud al API falló', String(err.stack || err), { code: err.code, modo: modo });
   throw err;
 }
 
