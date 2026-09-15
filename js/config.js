@@ -8,7 +8,7 @@ const ALLOWED_DOMAIN = 'fertrac.com';
 const APPS_SCRIPT_URL = 'https://script.google.com/a/macros/fertrac.com/s/AKfycbwccxPfzNTHEF6eHJfParY7QFxae3e2pWBL9XdlSiFSOPVgO3FpBmmFzqcTHDntC9VX/exec';
 const ACCESS_KEY = 'fertrac2024';
 const ENFORCE_REVOCACION = false; // TRANSICIÓN: false = no bloquea (cae a la llave). En el CIERRE: poner true.
-const LOG_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxx7oY3525l6Rfz3tsbON9hZ7rTDmUHK58JEdOucXXn2jiUChJzORuLYlTQrj0tTcJS/exec';
+const LOG_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyJNGJHkAqHvm0slr0E9eeLlMhnxXO2JDIXs_9FaBkBt637HxzdpFwhPv31coVPp24Z/exec';
 
 // ── Índices de columnas del catálogo (fila de Hoja2) ──
 const C = {
