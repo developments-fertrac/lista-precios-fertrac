@@ -984,7 +984,9 @@ function closeModal() {
 
 function formatPrice(val) {
   if (!val) return '—';
-  const n = parseFloat(String(val).replace(/[^0-9.]/g, ''));
+  const s = String(val);
+  if (/[a-záéíóúñ]/i.test(s)) return val;
+  const n = parseFloat(s.replace(/[^0-9.]/g, ''));
   if (isNaN(n)) return val;
   return '$' + n.toLocaleString('es-CO', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 }
