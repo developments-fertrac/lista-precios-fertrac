@@ -1037,6 +1037,29 @@ document.getElementById('search-input').addEventListener('input', function() {
   }, 1000);
 });
 // ════════════════════════════════════════════════════════════════════════
+// ATAJO Ctrl+F / Cmd+F → enfoca el buscador del catálogo.
+// Si el foco ya está en el buscador (o en otro campo de texto), se deja
+// pasar el evento para que el navegador conserve "Buscar en la página".
+// ════════════════════════════════════════════════════════════════════════
+document.addEventListener('keydown', function (e) {
+  if (!(e.ctrlKey || e.metaKey) || e.key.toLowerCase() !== 'f') return;
+  var el = e.target;
+  var enCampo = el && (
+    el.tagName === 'INPUT' ||
+    el.tagName === 'TEXTAREA' ||
+    el.tagName === 'SELECT' ||
+    el.isContentEditable
+  );
+  if (el && el.id === 'search-input') return;   // ya en el buscador → Buscar nativo
+  if (enCampo) return;                          // en otro campo → no robar el atajo
+  e.preventDefault();
+  var input = document.getElementById('search-input');
+  input.focus();
+  input.select();
+  applyFilters();
+});
+
+// ════════════════════════════════════════════════════════════════════════
 // AUTO-REFRESH SILENCIOSO — actualiza datos sin que el asesor recargue
 // ════════════════════════════════════════════════════════════════════════
 const AUTO_REFRESH_MS = 2 * 60 * 1000; // cada 10 minutos (ajustable)
