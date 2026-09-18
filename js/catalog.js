@@ -984,10 +984,16 @@ function closeModal() {
 
 function formatPrice(val) {
   if (!val) return '—';
-  const s = String(val);
+  const s = String(val).trim();
+  // Texto con letras → devolver literal tal cual, nunca convertir a moneda.
   if (/[a-záéíóúñ]/i.test(s)) return val;
-  const n = parseFloat(s.replace(/[^0-9.]/g, ''));
-  if (isNaN(n)) return val;
+  const clean = s.replace(/[$\s]/g, '').trim();
+  // es-CO: el punto es separador de miles → "80.000" es 80000, no 80.
+  // Solo se quitan los puntos si el patrón es claramente de miles (grupos de 3).
+  const esMiles = /^\d{1,3}(?:\.\d{3})+$/.test(clean);
+  const numeric = esMiles ? clean.replace(/\./g, '') : clean.replace(/[^0-9.]/g, '');
+  const n = parseFloat(numeric);
+  if (isNaN(n) || n <= 0) return val;
   return '$' + n.toLocaleString('es-CO', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 }
 
