@@ -84,6 +84,7 @@ if ('serviceWorker' in navigator) {
       setInterval(() => reg.update(), 30 * 60 * 1000);
     })
     .catch(err => console.log('SW error:', err));
+}
 
 // ── STORAGE ────────────────────────────────────────────────────────────────
 function saveData(data) {
