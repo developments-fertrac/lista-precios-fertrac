@@ -1,5 +1,5 @@
-const CACHE = 'fertrac-v10.5.3';
-const V = 'v=10.5.3';
+const CACHE = 'fertrac-v10.5.4';
+const V = 'v=10.5.4';
 
 // Fase 4: caché runtime de imágenes (thumbnails de Drive) — independiente del
 // precache: un bump de versión no borra las fotos ya descargadas.
@@ -61,6 +61,15 @@ self.addEventListener('install', e => {
     ]))
   );
   self.skipWaiting();
+});
+
+// Fase: la página puede pedir saltar el waiting y reclamar control para que el
+// nuevo despliegue aplique de inmediato (en vez de esperar a cerrar pestañas).
+self.addEventListener('message', e => {
+  if (e.data && e.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+    self.clients.claim();
+  }
 });
 
 self.addEventListener('activate', e => {

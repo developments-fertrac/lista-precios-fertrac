@@ -67,16 +67,23 @@ if ('serviceWorker' in navigator) {
     });
   }
 
-  navigator.serviceWorker.register('/lista-precios-fertrac/sw.js', { scope: '/lista-precios-fertrac/' })
+  // updateViaCache: 'none' fuerza a revalidar sw.js contra la red en cada
+  // reg.update(), sin que el navegador lo sirva desde su caché HTTP. Así un
+  // bump de versión despliega en el próximo check.
+  navigator.serviceWorker.register('/lista-precios-fertrac/sw.js', {
+    scope: '/lista-precios-fertrac/',
+    updateViaCache: 'none'
+  })
     .then(reg => {
       console.log('SW registrado correctamente');
+      // Check inmediato al cargar + cada 30 min + al volver a la pestaña.
+      reg.update();
       document.addEventListener('visibilitychange', () => {
         if (document.visibilityState === 'visible') reg.update();
       });
       setInterval(() => reg.update(), 30 * 60 * 1000);
     })
     .catch(err => console.log('SW error:', err));
-}
 
 // ── STORAGE ────────────────────────────────────────────────────────────────
 function saveData(data) {
@@ -963,6 +970,7 @@ function pcard(label, val, isPromo) {
   return '<div class="price-card' + (isPromo?' promo':'') + '" style="' + extraStyle + '"><label>' + label + '</label><div class="amount" style="' + amountStyle + '">' + formatPrice(val) + (isInvalidPrice ? ' ⚠️' : '') + '</div></div>';
 }
 function pcardClass(label, val, cls) {
+  if (String(val || '').toUpperCase().indexOf('#VALUE!') >= 0) return '';
   return '<div class="price-card ' + cls + '"><label>' + label + '</label><div class="amount">' + formatPrice(val) + '</div></div>';
 }
 function openModal(imgEl) {
