@@ -31,6 +31,18 @@ window.App = window.App || {};
     isAndroid: isAndroid
   };
 
-  // GA4: canal de consumo expuesto como global para los eventos de gtag.
-  window.FT_CANAL = label;
+  // Canal de consumo para GA4 (GTM). Compacto y alineado a la dimensión
+  // personalizada `canal` configurada en GA4: apk_android | pwa_instalada | navegador.
+  // `App.Platform.label` se conserva con su granularidad para el backend.
+  const canal = isNative ? 'apk_android' : isStandalone ? 'pwa_instalada' : 'navegador';
+  window.FT_CANAL = canal;
+
+  // GTM: publicar `canal` como estado del dataLayer desde el arranque, para
+  // que la variable "canal" del contenedor tenga siempre el dispositivo y no
+  // dependa de que cada evento lo traiga en su push (p. ej. tags que disparan
+  // en PageView o antes del primer evento personalizado).
+  try {
+    window.dataLayer = window.dataLayer || [];
+    window.dataLayer.push({ canal: canal });
+  } catch (e) { /* si GTM aún no inicializó, el canal llega con el primer push */ }
 })(window);
