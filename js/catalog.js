@@ -1040,11 +1040,14 @@ document.getElementById('search-input').addEventListener('input', function() {
   _searchTimer = setTimeout(function() {
     logSearchQuery(val);
 
-    // GA4: se dispara con el resultado ya resuelto (applyFilters ya corrió para
-    // este mismo `val`), así la tasa de not_found sale gratis del evento.
-    if (typeof gtag === 'function' && val && val.trim().length >= 2) {
+    // GA4 (vía GTM): se dispara con el resultado ya resuelto (applyFilters ya
+    // corrió para este mismo `val`), así la tasa de not_found sale gratis del
+    // evento. Se empuja directo al dataLayer para que lo desencadene el GTM.
+    if (val && val.trim().length >= 2) {
       var marcas = Array.from(SEL['f-marca'] || []);
-      gtag('event', 'consulta_referencia', {
+      window.dataLayer = window.dataLayer || [];
+      window.dataLayer.push({
+        event: 'consulta_referencia',
         referencia: val.trim(),
         marca: marcas.length ? marcas.join('|') : '(sin marca)',
         resultado: filtered.length > 0 ? 'found' : 'not_found',

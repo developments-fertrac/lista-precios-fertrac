@@ -7,15 +7,20 @@ let userEmail = null;
 // FASE 1: detección de plataforma centralizada (App.Platform singleton)
 const isNativeApp = window.App.Platform.isNativeApp;
 
-// ── GA4: apertura de app ────────────────────────────────────────────────────
+// ── GA4 (vía GTM): apertura de app ──────────────────────────────────────
 // Identifica al asesor por el 'sub' de Google (identificador opaco y estable),
 // nunca por el correo. Deduplica el mismo asesor entre APK, PWA y navegador.
 // Se llama en las tres rutas de entrada: login nativo, login web y sesión
 // restaurada desde localStorage (que es la apertura del día a día).
+// El evento se empuja directo al dataLayer; el GTM desencadena el tag de GA4.
 function gaMarcarApertura(sub) {
-  if (!sub || typeof gtag !== 'function') return;
-  gtag('set', { user_id: sub });
-  gtag('event', 'app_open', { canal: window.FT_CANAL });
+  if (!sub) return;
+  window.dataLayer = window.dataLayer || [];
+  window.dataLayer.push({
+    event: 'app_open',
+    user_id: sub,
+    canal: window.FT_CANAL
+  });
 }
 
 // ════════════════════════════════════════════════════════════════════════
