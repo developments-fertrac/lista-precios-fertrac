@@ -147,7 +147,7 @@ function loginWithGoogleWeb() {
   const redirectUri = encodeURIComponent(OAUTH_REDIRECT_URI);
   const scope = encodeURIComponent('email profile');
   const url = 'https://accounts.google.com/o/oauth2/v2/auth' +
-    '?client_id=' + CLIENT_ID +
+    '?client_id=' + WEB_CLIENT_ID +
     '&redirect_uri=' + redirectUri +
     '&response_type=token' +
     '&scope=' + scope +
@@ -507,7 +507,7 @@ function renovarTokenWeb() {
     // Mismo redirect_uri que el login (el autorizado en Google Cloud Console).
     const redirectUri = OAUTH_REDIRECT_URI;
     const url = 'https://accounts.google.com/o/oauth2/v2/auth' +
-      '?client_id=' + CLIENT_ID +
+      '?client_id=' + WEB_CLIENT_ID +
       '&redirect_uri=' + encodeURIComponent(redirectUri) +
       '&response_type=token' +
       '&scope=' + encodeURIComponent('email profile') +

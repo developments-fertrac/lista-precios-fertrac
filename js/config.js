@@ -3,6 +3,8 @@
 // ============================================================
 
 const CLIENT_ID = '748686271759-3ebepqvfssbpn650m8pu1l6umdq093fo.apps.googleusercontent.com';
+// Cliente OAuth WEB (navegador/PWA en app.fertrac.com). El nativo Android sigue con CLIENT_ID.
+const WEB_CLIENT_ID = '13363096447-a96qshpi1rg9ahoc72t9e04p0nqp000a.apps.googleusercontent.com';
 const ALLOWED_DOMAIN = 'fertrac.com';
 
 // redirect_uri OAuth canónico: siempre la raíz del origen actual (sin path, query ni hash).
