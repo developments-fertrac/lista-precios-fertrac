@@ -619,7 +619,7 @@ const FOTOS_CACHE_TTL = 3600;               // 1 hora de vigencia
  */
 function obtenerUrlsFotosCache_() {
   const cache = CacheService.getScriptCache();
-  const cacheado = cache.get(FOTOS_CACHE_KEY);
+  const cacheado = cacheGetGrande_(cache, FOTOS_CACHE_KEY);
   if (cacheado !== null) {
     try { return JSON.parse(cacheado); } catch (e) {}
   }
@@ -644,7 +644,7 @@ function obtenerUrlsFotosCache_() {
     }
   }
 
-  cache.put(FOTOS_CACHE_KEY, JSON.stringify(urlsMap), FOTOS_CACHE_TTL);
+  cachePutGrande_(cache, FOTOS_CACHE_KEY, JSON.stringify(urlsMap), FOTOS_CACHE_TTL);
   return urlsMap;
 }
 
@@ -653,7 +653,7 @@ function obtenerUrlsFotosCache_() {
  * fotos nuevas sin esperar el TTL). Se llama tras una sync completa.
  */
 function invalidarCacheFotos_() {
-  try { CacheService.getScriptCache().remove(FOTOS_CACHE_KEY); } catch (e) {}
+  cacheRemoveGrande_(CacheService.getScriptCache(), FOTOS_CACHE_KEY);
 }
 
 // ============================================================

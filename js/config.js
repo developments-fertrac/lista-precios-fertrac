@@ -12,10 +12,10 @@ const ALLOWED_DOMAIN = 'fertrac.com';
 //   https://app.fertrac.com/   (producción)
 const OAUTH_REDIRECT_URI = window.location.origin + '/';
 
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyz1AyWn7LdhXZK6SkYLIpKKjbSmQZ8PI56cKJIc8ePo79lI5INM98-A_brhwtqOXdV/exec';
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzlz5V2vPDn1GonrxoFB1zn6hjwV8c5YKe8Jm34bv3u2NtJ6SxT4WeaIST1_JzKIpix/exec';
 const ACCESS_KEY = 'fertrac2024';
 const ENFORCE_REVOCACION = false; // TRANSICIÓN: false = no bloquea (cae a la llave). En el CIERRE: poner true.
-const LOG_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyz1AyWn7LdhXZK6SkYLIpKKjbSmQZ8PI56cKJIc8ePo79lI5INM98-A_brhwtqOXdV/exec';
+const LOG_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzlz5V2vPDn1GonrxoFB1zn6hjwV8c5YKe8Jm34bv3u2NtJ6SxT4WeaIST1_JzKIpix/exec';
 
 // ── Índices de columnas del catálogo (fila de Hoja2) ──
 const C = {

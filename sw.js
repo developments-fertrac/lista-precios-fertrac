@@ -1,5 +1,5 @@
-const CACHE = 'fertrac-v10.6.3';
-const V = 'v=10.6.3';
+const CACHE = 'fertrac-v10.6.5';
+const V = 'v=10.6.5';
 
 // Fase 4: caché runtime de imágenes (thumbnails de Drive) — independiente del
 // precache: un bump de versión no borra las fotos ya descargadas.
@@ -87,6 +87,12 @@ self.addEventListener('activate', e => {
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
 
+  // Solo se interceptan recursos propios (y thumbnails de Drive, abajo). Las
+  // llamadas al API (script.google.com) y demás orígenes van directo a la red:
+  // si el SW las envuelve, un fallo CORS termina en 'Failed to convert value to Response'.
+  const esDriveThumb = url.hostname === 'drive.google.com' && url.pathname.indexOf('/thumbnail') >= 0;
+  if (url.origin !== self.location.origin && !esDriveThumb) return;
+
   // Fase 4: thumbnails de Drive se sirven cache-first desde el caché runtime.
   if (e.request.method === 'GET' &&
       url.hostname === 'drive.google.com' &&
@@ -104,7 +110,9 @@ self.addEventListener('fetch', e => {
       }
       // Recursos → normalizar quitando el query antes de buscar en caché.
       url.search = '';
-      return caches.match(url.toString()).then(c => c || caches.match(e.request));
+      return caches.match(url.toString())
+        .then(c => c || caches.match(e.request))
+        .then(c => c || Response.error());
     })
   );
 });

@@ -127,7 +127,7 @@ function doGet(e) {
 // Devuelve { ok: true, data: [...] } o { ok: false, error: '...' }.
 function obtenerDatosListaCacheados_() {
   const cache = CacheService.getScriptCache();
-  const jsonCache = cache.get(API_CACHE_LISTA);
+  const jsonCache = cacheGetGrande_(cache, API_CACHE_LISTA);
   if (jsonCache) {
     try { return { ok: true, data: JSON.parse(jsonCache).data || [] }; } catch (e) {}
   }
@@ -148,14 +148,14 @@ function obtenerDatosListaCacheados_() {
     tieneLock = true;
 
     // Doble chequeo: quizá otra invocación pobló el caché mientras esperábamos.
-    const jsonAhora = cache.get(API_CACHE_LISTA);
+    const jsonAhora = cacheGetGrande_(cache, API_CACHE_LISTA);
     if (jsonAhora) {
       try { return { ok: true, data: JSON.parse(jsonAhora).data || [] }; } catch (e) {}
     }
 
     const sh = SpreadsheetApp.openById(CONFIG.ID_BASE_MOTOR).getSheetByName(CONFIG.SHEET_MOTOR);
     const values = sh.getDataRange().getValues();       // incluye fila 1 (encabezado)
-    cache.put(API_CACHE_LISTA, JSON.stringify({ data: values }), API_TTL_LISTA); // repoblar caché
+    cachePutGrande_(cache, API_CACHE_LISTA, JSON.stringify({ data: values }), API_TTL_LISTA); // repoblar caché
     return { ok: true, data: values };
 
   } catch (err) {
@@ -278,6 +278,69 @@ function estaAutorizado_(idSpreadsheet, nombreHoja, email) {
 // También invalida el caché de URLs de fotos (independiente), para que
 // el frontend vea fotos nuevas sin esperar su TTL.
 function invalidarCacheCatalogo_() {
-  try { CacheService.getScriptCache().remove(API_CACHE_LISTA); } catch (e) {}
+  try { cacheRemoveGrande_(CacheService.getScriptCache(), API_CACHE_LISTA); } catch (e) {}
   try { invalidarCacheFotos_(); } catch (e) {}
+}
+
+// ============================================================
+// CACHÉ GRANDE — CacheService limita cada valor a 100 KB
+// ("Argumento demasiado grande: value"). Estos helpers parten el texto en
+// fragmentos y guardan en la clave principal un índice "__chunks:N".
+// Un fallo de caché NUNCA rompe la respuesta: solo se pierde la aceleración.
+// ============================================================
+const CACHE_CHUNK_CHARS = 30000;   // 30k chars ≤ 90 KB aun con UTF-8 de 3 bytes
+const CACHE_MAX_CHUNKS  = 300;     // CacheService guarda máx. 1.000 ítems (expulsa hasta 900):
+                                   // más de ~9 MB no se cachea para no desplazar tokens/heartbeats.
+
+function cachePutGrande_(cache, key, str, ttl) {
+  try {
+    const n = Math.max(1, Math.ceil(str.length / CACHE_CHUNK_CHARS));
+    if (n > CACHE_MAX_CHUNKS) {
+      console.warn("cachePutGrande_(" + key + ") omitido: " + n + " fragmentos > " + CACHE_MAX_CHUNKS);
+      return false;
+    }
+    const obj = {};
+    for (let i = 0; i < n; i++) {
+      obj[key + "_" + i] = str.substr(i * CACHE_CHUNK_CHARS, CACHE_CHUNK_CHARS);
+    }
+    obj[key] = "__chunks:" + n;
+    cache.putAll(obj, ttl);
+    return true;
+  } catch (e) {
+    console.warn("cachePutGrande_(" + key + ") omitido: " + e.message);
+    return false;
+  }
+}
+
+function cacheGetGrande_(cache, key) {
+  try {
+    const idx = cache.get(key);
+    if (idx === null) return null;
+    if (idx.indexOf("__chunks:") !== 0) return idx;          // valor legado (sin fragmentar)
+    const n = parseInt(idx.slice(9), 10);
+    const keys = [];
+    for (let i = 0; i < n; i++) keys.push(key + "_" + i);
+    const partes = cache.getAll(keys);
+    let out = "";
+    for (let i = 0; i < n; i++) {
+      const p = partes[keys[i]];
+      if (p === undefined || p === null) return null;       // fragmento expulsado → recalcular
+      out += p;
+    }
+    return out;
+  } catch (e) {
+    return null;
+  }
+}
+
+function cacheRemoveGrande_(cache, key) {
+  try {
+    const idx = cache.get(key);
+    const keys = [key];
+    if (idx && idx.indexOf("__chunks:") === 0) {
+      const n = parseInt(idx.slice(9), 10);
+      for (let i = 0; i < n; i++) keys.push(key + "_" + i);
+    }
+    cache.removeAll(keys);
+  } catch (e) {}
 }
