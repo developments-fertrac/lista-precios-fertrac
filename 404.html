@@ -2,21 +2,72 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<title>Redirigiendo…</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Página no encontrada · Fertrac</title>
+<link rel="icon" type="image/png" href="/logo.png">
 <script>
+// Compatibilidad: enlaces antiguos de GitHub Pages se redirigen al nuevo dominio
 (function () {
+  if (location.hostname !== 'developments-fertrac.github.io') return;
   var prefix = '/lista-precios-fertrac';
   var path = location.pathname.indexOf(prefix) === 0
     ? (location.pathname.slice(prefix.length) || '/')
     : '/';
-  var origin = location.hostname === 'developments-fertrac.github.io'
-    ? 'https://app.fertrac.com'
-    : location.origin;
-  location.replace(origin + path + location.search + location.hash);
+  location.replace('https://app.fertrac.com' + path + location.search + location.hash);
 })();
 </script>
+<style>
+  :root { --naranja: #F47920; --gris: #58595B; --texto: #222; --subtexto: #666; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', sans-serif; background: #f5f5f5; color: var(--texto);
+    min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 16px;
+  }
+  .card {
+    background: #fff; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    max-width: 520px; width: 100%; overflow: hidden; text-align: center;
+    border-top: 5px solid var(--naranja);
+  }
+  .foto {
+    width: 100%; aspect-ratio: 3 / 2; background: #eee;
+    display: flex; align-items: center; justify-content: center; color: var(--subtexto);
+  }
+  .foto img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .leyenda { padding: 24px 24px 28px; }
+  .leyenda .logo { height: 48px; margin-bottom: 16px; }
+  .leyenda h1 { font-size: 1.25rem; color: var(--gris); margin-bottom: 8px; }
+  .leyenda p { font-size: 1rem; color: var(--subtexto); }
+  .leyenda a { color: var(--naranja); font-weight: 600; text-decoration: none; }
+  .leyenda a:hover { text-decoration: underline; }
+</style>
 </head>
 <body>
-<p>Redirigiendo a <a href="https://app.fertrac.com/">https://app.fertrac.com/</a>…</p>
+  <main class="card">
+    <div class="foto" id="foto">Cargando…</div>
+    <div class="leyenda">
+      <img src="/logo.png" alt="Fertrac" class="logo">
+      <h1>Página no encontrada</h1>
+      <p>Ups, algo salió mal. Vuelve al <a href="https://app.fertrac.com">inicio</a>.</p>
+    </div>
+  </main>
+
+<script>
+(function () {
+  var foto = document.getElementById('foto');
+  fetch('https://api.thedogapi.com/v1/images/search', {
+    headers: { 'x-api-key': 'live_lBWyTtKnelN5kG7fW8SzDOY7d3zKDu9FJ3AUgeqtsmlV5wloti1WIuFCgrZ8NZDz' }
+  })
+    .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+    .then(function (data) {
+      if (!data.length || !data[0].url) throw new Error('sin url');
+      var img = new Image();
+      img.alt = 'Imagen ilustrativa';
+      img.onload = function () { foto.textContent = ''; foto.appendChild(img); };
+      img.onerror = function () { foto.style.display = 'none'; };
+      img.src = data[0].url;
+    })
+    .catch(function () { foto.style.display = 'none'; });
+})();
+</script>
 </body>
 </html>

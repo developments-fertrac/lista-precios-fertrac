@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Redirigiendo…</title>
+<script>
+(function () {
+  var prefix = '/lista-precios-fertrac';
+  var path = location.pathname.indexOf(prefix) === 0
+    ? (location.pathname.slice(prefix.length) || '/')
+    : '/';
+  var origin = location.hostname === 'developments-fertrac.github.io'
+    ? 'https://app.fertrac.com'
+    : location.origin;
+  location.replace(origin + path + location.search + location.hash);
+})();
+</script>
+</head>
+<body>
+<p>Redirigiendo a <a href="https://app.fertrac.com/">https://app.fertrac.com/</a>…</p>
+</body>
+</html>
