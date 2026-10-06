@@ -5,6 +5,11 @@
 const CLIENT_ID = '748686271759-3ebepqvfssbpn650m8pu1l6umdq093fo.apps.googleusercontent.com';
 const ALLOWED_DOMAIN = 'fertrac.com';
 
+// redirect_uri OAuth canónico: siempre la raíz del origen actual (sin path, query ni hash).
+// Debe coincidir EXACTO con un "URI de redireccionamiento autorizado" en Google Cloud Console:
+//   https://app.fertrac.com/   (producción)
+const OAUTH_REDIRECT_URI = window.location.origin + '/';
+
 const APPS_SCRIPT_URL = 'https://script.google.com/a/macros/fertrac.com/s/AKfycbwccxPfzNTHEF6eHJfParY7QFxae3e2pWBL9XdlSiFSOPVgO3FpBmmFzqcTHDntC9VX/exec';
 const ACCESS_KEY = 'fertrac2024';
 const ENFORCE_REVOCACION = false; // TRANSICIÓN: false = no bloquea (cae a la llave). En el CIERRE: poner true.
