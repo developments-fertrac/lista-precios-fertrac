@@ -3,7 +3,9 @@
 // ============================================================
 
 const CLIENT_ID = '748686271759-3ebepqvfssbpn650m8pu1l6umdq093fo.apps.googleusercontent.com';
-// Cliente OAuth WEB (navegador/PWA en app.fertrac.com). El nativo Android sigue con CLIENT_ID.
+// Cliente OAuth WEB (proyecto 13363096447). Lo usan el login web Y el nativo Android: el plugin hace
+// requestIdToken(WEB_CLIENT_ID) y Google valida el cliente Android del MISMO proyecto (paquete + SHA-1).
+// CLIENT_ID (proyecto 748686271759) queda solo como referencia/rollback.
 const WEB_CLIENT_ID = '13363096447-a96qshpi1rg9ahoc72t9e04p0nqp000a.apps.googleusercontent.com';
 const ALLOWED_DOMAIN = 'fertrac.com';
 

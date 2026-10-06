@@ -92,7 +92,7 @@ async function loginWithGoogle() {
       if (!plugin) throw new Error('Plugin no disponible');
 
       await plugin.initialize({
-        clientId: CLIENT_ID,
+        clientId: WEB_CLIENT_ID,   // proyecto 13363096447: su cliente Android (paquete + SHA-1) autoriza el login nativo
         scopes: ['email', 'profile'],
         grantOfflineAccess: false
       });
