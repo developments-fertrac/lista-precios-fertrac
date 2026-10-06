@@ -70,8 +70,8 @@ if ('serviceWorker' in navigator) {
   // updateViaCache: 'none' fuerza a revalidar sw.js contra la red en cada
   // reg.update(), sin que el navegador lo sirva desde su caché HTTP. Así un
   // bump de versión despliega en el próximo check.
-  navigator.serviceWorker.register('/lista-precios-fertrac/sw.js', {
-    scope: '/lista-precios-fertrac/',
+  navigator.serviceWorker.register('/sw.js', {
+    scope: '/',
     updateViaCache: 'none'
   })
     .then(reg => {

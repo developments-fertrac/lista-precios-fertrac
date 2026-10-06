@@ -1,5 +1,5 @@
-const CACHE = 'fertrac-v10.5.6';
-const V = 'v=10.5.6';
+const CACHE = 'fertrac-v10.6.0';
+const V = 'v=10.6.0';
 
 // Fase 4: caché runtime de imágenes (thumbnails de Drive) — independiente del
 // precache: un bump de versión no borra las fotos ya descargadas.
@@ -45,19 +45,19 @@ async function shellDesdeCache() {
 self.addEventListener('install', e => {
   e.waitUntil(
     caches.open(CACHE).then(cache => cache.addAll([
-      '/lista-precios-fertrac/?' + V,
-      '/lista-precios-fertrac/index.html?' + V,
-      '/lista-precios-fertrac/css/styles.css?' + V,
-      '/lista-precios-fertrac/js/config.js?' + V,
-      '/lista-precios-fertrac/js/core/store.js?' + V,
-      '/lista-precios-fertrac/js/core/platform.js?' + V,
-      '/lista-precios-fertrac/js/core/queue.js?' + V,
-      '/lista-precios-fertrac/js/core/api.js?' + V,
-      '/lista-precios-fertrac/js/core/session.js?' + V,
-      '/lista-precios-fertrac/js/core/log.js?' + V,
-      '/lista-precios-fertrac/js/auth.js?' + V,
-      '/lista-precios-fertrac/js/catalog.js?' + V,
-      '/lista-precios-fertrac/manifest.json?' + V
+      '/?' + V,
+      '/index.html?' + V,
+      '/css/styles.css?' + V,
+      '/js/config.js?' + V,
+      '/js/core/store.js?' + V,
+      '/js/core/platform.js?' + V,
+      '/js/core/queue.js?' + V,
+      '/js/core/api.js?' + V,
+      '/js/core/session.js?' + V,
+      '/js/core/log.js?' + V,
+      '/js/auth.js?' + V,
+      '/js/catalog.js?' + V,
+      '/manifest.json?' + V
     ]))
   );
   self.skipWaiting();

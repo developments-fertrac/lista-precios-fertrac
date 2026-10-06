@@ -13,6 +13,13 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 <script src="https://app.secureprivacy.ai/script/6aa41d4214671a86a000257b.js" defer></script>
 
 <meta charset="UTF-8">
+<script>
+(function () {
+  if (location.hostname !== 'developments-fertrac.github.io') return;
+  var path = location.pathname.replace(/^\/lista-precios-fertrac\/?/, '/');
+  location.replace('https://app.fertrac.com' + (path || '/') + location.search + location.hash);
+})();
+</script>
 <meta name="theme-color" content="#1a5c2a">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -20,9 +27,9 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="apple-mobile-web-app-title" content="Lista Fertrac">
 <title>Lista de Precios - Fertrac</title>
-<link rel="manifest" href="/lista-precios-fertrac/manifest.json?v=10.5.6">
-<link rel="icon" type="image/png" href="/lista-precios-fertrac/logo.png">
-<link rel="apple-touch-icon" href="/lista-precios-fertrac/logo.png">
+<link rel="manifest" href="/manifest.json?v=10.6.0">
+<link rel="icon" type="image/png" href="/logo.png">
+<link rel="apple-touch-icon" href="/logo.png">
 <script src="capacitor.js" onerror="console.log('No Capacitor runtime')"></script>
 <!-- FASE 2 (rev): guarda para el iframe de renovación silenciosa de token.
      Cuando el iframe oculto cae con #access_token en la URL, corta la carga
@@ -36,7 +43,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
   })();
 </script>
 
-<link rel="stylesheet" href="/lista-precios-fertrac/css/styles.css?v=10.5.6">
+<link rel="stylesheet" href="/css/styles.css?v=10.6.0">
 </head>
 <body>
 <!-- Google Tag Manager (noscript) -->
@@ -145,16 +152,16 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   </div>
 </main>
 
-<script src="/lista-precios-fertrac/js/config.js?v=10.5.6"></script>
+<script src="/js/config.js?v=10.6.0"></script>
 <!-- FASE 1: núcleo MVC (Singletons + Observer) — deben cargar antes de auth/catalog -->
-<script src="/lista-precios-fertrac/js/core/store.js?v=10.5.6"></script>
-<script src="/lista-precios-fertrac/js/core/platform.js?v=10.5.6"></script>
-<script src="/lista-precios-fertrac/js/core/queue.js?v=10.5.6"></script>
-<script src="/lista-precios-fertrac/js/core/api.js?v=10.5.6"></script>
-<script src="/lista-precios-fertrac/js/core/session.js?v=10.5.6"></script>
-<script src="/lista-precios-fertrac/js/core/log.js?v=10.5.6"></script>
-<script src="/lista-precios-fertrac/js/auth.js?v=10.5.6"></script>
-<script src="/lista-precios-fertrac/js/catalog.js?v=10.5.6"></script>
+<script src="/js/core/store.js?v=10.6.0"></script>
+<script src="/js/core/platform.js?v=10.6.0"></script>
+<script src="/js/core/queue.js?v=10.6.0"></script>
+<script src="/js/core/api.js?v=10.6.0"></script>
+<script src="/js/core/session.js?v=10.6.0"></script>
+<script src="/js/core/log.js?v=10.6.0"></script>
+<script src="/js/auth.js?v=10.6.0"></script>
+<script src="/js/catalog.js?v=10.6.0"></script>
 <!-- iOS INSTALL BANNER -->
 <div id="ios-install-banner">
   <span style="font-size:1.6rem">📲</span>
