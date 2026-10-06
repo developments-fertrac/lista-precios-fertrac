@@ -14,7 +14,7 @@ function instalarTriggers() {
       t.getHandlerFunction() === "sincronizarListaABaseMotor" ||
       t.getHandlerFunction() === "sincronizacionCompleta" ||
       t.getHandlerFunction() === "reconstruirFotosCache" ||
-      t.getHandlerFunction() === "sincronizarNuevasReferencias" ||
+      t.getHandlerFunction() === "sincronizarFotos" ||
       t.getHandlerFunction() === "generarReporteInactivos" ||
       t.getHandlerFunction() === "onListaPreciosEdit")
     .forEach(t => ScriptApp.deleteTrigger(t));
@@ -22,9 +22,9 @@ function instalarTriggers() {
   ScriptApp.newTrigger("sincronizarListaABaseMotor")
     .timeBased().everyMinutes(5).create();
 
-  // Fotos nuevas: corre de a NUEVAS_BLOQUE (280) por ejecución con cursor en
-  // CacheService; cada trigger avanza al siguiente bloque sin timeout.
-  ScriptApp.newTrigger("sincronizarNuevasReferencias")
+  // Fotos: primero reintenta referencias con ERROR=1 y luego sincroniza
+  // referencias nuevas de LISTA DE PRECIOS (NUEVAS_BLOQUE=280 por ejecución).
+  ScriptApp.newTrigger("sincronizarFotos")
     .timeBased().everyMinutes(10).create();
 
   // La sincronización completa ya no corre por reloj: solo cuando se edite LISTA DE PRECIOS
@@ -53,7 +53,7 @@ function eliminarTriggers() {
       t.getHandlerFunction() === "sincronizacionCompleta" ||
       t.getHandlerFunction() === "reconstruirFotosCache" ||
       t.getHandlerFunction() === "sincronizarFotosCache" ||
-      t.getHandlerFunction() === "sincronizarNuevasReferencias" ||
+      t.getHandlerFunction() === "sincronizarFotos" ||
       t.getHandlerFunction() === "generarReporteInactivos" ||
       t.getHandlerFunction() === "onListaPreciosEditFotos" ||
       t.getHandlerFunction() === "onListaPreciosEdit")
@@ -78,7 +78,7 @@ function pausarTriggersTemporalmente() {
   ScriptApp.getProjectTriggers()
     .filter(t => t.getHandlerFunction() === "sincronizarListaABaseMotor" ||
                  t.getHandlerFunction() === "sincronizacionCompleta" ||
-                 t.getHandlerFunction() === "sincronizarNuevasReferencias" ||
+                 t.getHandlerFunction() === "sincronizarFotos" ||
                  t.getHandlerFunction() === "onListaPreciosEdit")
     .forEach(t => ScriptApp.deleteTrigger(t));
   console.log("⏸ Triggers pausados temporalmente");

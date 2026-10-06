@@ -323,7 +323,7 @@ function ejecutarCompleta_(enviarCorreo) {
         precio:    row[LISTA_COL_PRECIO - 1],
         inv:       row[LISTA_COL_INV - 1],
         alt:       row[4],
-        prod:      row[5],
+        prod:      String(row[5] == null ? "" : row[5]).trim(),
         linea:     row[20],
         marca:     row[7],
         neto5:     row[9],
@@ -391,7 +391,8 @@ function ejecutarCompleta_(enviarCorreo) {
     const { filaReal, row } = mapaMotor2.get(ref);
     let cambio = false;
     COLS_SYNC.forEach(([col, campo]) => {
-      const valor = datos[campo];
+      let valor = datos[campo];
+      if (col === 4) valor = String(valor == null ? "" : valor).trim();
       if (String(row[col - 1]) !== String(valor)) {
         actualizaciones.push({ filaReal, col, valor });
         cambio = true;
@@ -418,7 +419,7 @@ function ejecutarCompleta_(enviarCorreo) {
     filaVacia[0]  = ref;
     // filaVacia[1] (B) = FOTO se deja vacía: la gestiona el proceso de fotos
     filaVacia[2]  = datos.alt;
-    filaVacia[3]  = datos.prod;
+    filaVacia[3]  = String(datos.prod == null ? "" : datos.prod).trim();
     filaVacia[4]  = 0;
     filaVacia[5]  = 0;
     filaVacia[6]  = 0;

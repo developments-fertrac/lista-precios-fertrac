@@ -161,7 +161,7 @@ function recolectarUrlsYGuardarCache() {
  *   3. Descargar webp y guardar en FOLDER_ID
  *   4. Completar FOTO_URL_DRIVE con la URL del archivo
  */
-function sincronizarNuevasReferencias() {
+function _sincronizarNuevasReferencias_() {
   // ⚠️ LOCK GLOBAL (docs/LOCK_APPS_SCRIPT.md): job de descarga+escritura;
   // mientras corre bloquea la hoja y las lecturas de la app responden
   // 'temporalmente_ocupado' (falla la sincronización).
@@ -987,6 +987,32 @@ function _descargarWebp_(url, nombre) {
 }
 
 // ============================================================
+// SINCRONIZAR FOTOS — Punto de entrada único (errores + nuevas)
+// ============================================================
+
+/**
+ * Punto de entrada único para el mantenimiento de fotos. Ejecuta, en orden:
+ *   1. _actualizarFotosConError_()      → reintenta referencias en CACHE con ERROR=1.
+ *   2. _sincronizarNuevasReferencias_() → agrega y descarga referencias nuevas de LISTA DE PRECIOS.
+ *
+ * Si no hay referencias con error, _actualizarFotosConError_ lo deja registrado
+ * en el log e indica que continúa con la fase de nuevas referencias.
+ *
+ * actualizarFotosConError y sincronizarNuevasReferencias pasaron a ser
+ * funciones internas (prefijo _..._) — ya no se ejecutan sueltas por trigger
+ * ni manualmente; se invocan solo desde aquí.
+ */
+function sincronizarFotos() {
+  console.log("🔁 sincronizarFotos — fase 1/2: revisando fotos con ERROR=1");
+  _actualizarFotosConError_();
+
+  console.log("🔁 sincronizarFotos — fase 2/2: sincronizando referencias nuevas");
+  _sincronizarNuevasReferencias_();
+
+  console.log("✅ sincronizarFotos — ciclo completo finalizado");
+}
+
+// ============================================================
 // ACTUALIZAR FOTOS CON ERROR — Reintenta refs con ERROR=1 en CACHE
 // ============================================================
 
@@ -1005,7 +1031,7 @@ function _descargarWebp_(url, nombre) {
  * Es idempotente: solo toca filas con ERROR=1. Corre bajo lock y registra en
  * BITACORA_FOTOS. Pensada para ejecutarse manual o por trigger.
  */
-function actualizarFotosConError() {
+function _actualizarFotosConError_() {
   // ⚠️ LOCK GLOBAL (docs/LOCK_APPS_SCRIPT.md): job de re-descarga; mientras
   // corre bloquea la hoja y las lecturas de la app responden
   // 'temporalmente_ocupado' (falla la sincronización).
@@ -1041,14 +1067,16 @@ function actualizarFotosConError() {
       if (conError === "1") {
         errores.push({
           ref:      String(row[CACHE_COL_REF - 1] || "").trim().toUpperCase(),
+          urlLista: row[CACHE_COL_URL_LISTA - 1],
           driveUrl: String(row[CACHE_COL_URL_DRIVE - 1] || "").trim(),
+          fecha:    row[CACHE_COL_FECHA - 1],
           cacheRow: idx + 2
         });
       }
     });
 
     if (errores.length === 0) {
-      console.log("✅ No hay fotos con ERROR=1 que actualizar");
+      console.log("✅ No hay fotos con ERROR=1 que actualizar — se inicia sincronización de nuevas referencias");
       return;
     }
 
@@ -1089,10 +1117,10 @@ function actualizarFotosConError() {
     let reemplazadas = 0;
     const cacheMods = {};
 
-    errores.forEach(({ ref, driveUrl, cacheRow }) => {
+    errores.forEach(({ ref, urlLista, driveUrl, fecha, cacheRow }) => {
       // Sin referencia → no se puede cruzar ni descargar
       if (!ref) {
-        cacheMods[cacheRow] = ["", "", "", 1, "Sin referencia para procesar", ""];
+        cacheMods[cacheRow] = [ref, urlLista, driveUrl, fecha, 1, "Sin referencia para procesar"];
         persisten++;
         return;
       }
@@ -1101,7 +1129,7 @@ function actualizarFotosConError() {
 
       // Ya no tiene imagen en LISTA DE PRECIOS → limpiar el error (foto retirada)
       if (!url) {
-        cacheMods[cacheRow] = ["", "", "", "", "", "Foto retirada de LISTA DE PRECIOS"];
+        cacheMods[cacheRow] = [ref, urlLista, driveUrl, fecha, "", "Foto retirada de LISTA DE PRECIOS"];
         sinUrl++;
         console.log("   🗑️ " + ref + " — sin imagen en LISTA, error LIMPIADO");
         return;
@@ -1147,7 +1175,7 @@ function actualizarFotosConError() {
         const driveUrlNuevo = "https://drive.google.com/file/d/" + file.getId() + "/view";
 
         // Actualizar CACHE: URL actual de LISTA, DRIVE, limpiar ERROR/DETALLE
-        cacheMods[cacheRow] = [url, driveUrlNuevo, 200, "", new Date(), ""];
+        cacheMods[cacheRow] = [ref, url, driveUrlNuevo, new Date(), 200, ""];
 
         // Si la fila ya tenía una foto previa (con ID diferente al archivo
         // {ref}.webp guardado), se elimina de Drive (papelera).
@@ -1169,7 +1197,7 @@ function actualizarFotosConError() {
       }
 
       if (!archivoOK) {
-        cacheMods[cacheRow] = [url, driveUrl, 1, detalle || "Descarga falló", "", ""];
+        cacheMods[cacheRow] = [ref, url, driveUrl, fecha, 1, detalle || "Descarga falló"];
         persisten++;
         _registrarBitacoraFotos_(ref, "ERROR", detalle || "Descarga falló", String(MAX_REINTENTOS));
         console.log("   ❌ " + ref + " sigue con error tras " + MAX_REINTENTOS + " intentos");

@@ -31,11 +31,12 @@ Todos los `.gs` usan `LockService.getScriptLock()`, que en Apps Script es un
 | `Sync.gs:77` | `probarDiurna` (manual/prueba) | 10 000 ms | Omite |
 | `Sync.gs:90` | `probarCompleta` (manual/prueba) | 10 000 ms | Omite |
 | `Photos.gs:67` | `recolectarUrlsYGuardarCache` (bulk sobre LISTA→CACHE) | 60 000 ms | Omite |
-| `Photos.gs:159` | `sincronizarNuevasReferencias` | 60 000 ms | Omite |
+| `Photos.gs:164` | `_sincronizarNuevasReferencias_` (interna, invocada por `sincronizarFotos`) | 60 000 ms | Omite |
 | `Photos.gs:319` | `descargarFotosWebp` (descarga masiva a Drive) | `FOTOS_MAX_MS` | Omite |
 | `Photos.gs:452` | `procesarPendientesDrive` (lotes con checkpoint) | `FOTOS_MAX_MS` | Omite |
-| `Photos.gs:822` | `actualizarFotosConError` | `FOTOS_MAX_MS` | Omite |
-| `Photos.gs:1018` | `revalidarErroresCache` | `FOTOS_MAX_MS` | Omite |
+| `Photos.gs:1005` | `sincronizarFotos` (punto de entrada único: fase 1 errores → fase 2 nuevas) | — (delega el lock a cada fase interna) | — |
+| `Photos.gs:1034` | `_actualizarFotosConError_` (interna, invocada por `sincronizarFotos`) | `FOTOS_MAX_MS` | Omite |
+| `Photos.gs:1238` | `revalidarErroresCache` | `FOTOS_MAX_MS` | Omite |
 | `Classification.gs:39` | `_ejecutarClasificacionConLock_` (E,F,G,I en Hoja2) | 30 000 ms | Omite |
 | `Triggers.gs:65` | `liberarLock` (desbloqueo MANUAL de emergencia) | — | **Libera**, no bloquea |
 
@@ -73,7 +74,7 @@ sistema diciendo "otro proceso está con el lock, vuelve en unos segundos".
 ## 5. Recomendaciones para que "no bloquee el Excel ni falle la sincronización"
 
 - **No lanzar a mano** jobs pesados (`recolectarUrlsYGuardarCache`,
-  `descargarFotosWebp`, `procesarPendientesDrive`, `actualizarFotosConError`,
+  `descargarFotosWebp`, `procesarPendientesDrive`, `sincronizarFotos`,
   `revalidarErroresCache`, clasificación) **en horario de demanda**; hazlo fuera
   del horario laboral o en lotes pequeños (`procesarPendientesDrive` ya procesa
   por lotes con checkpoint).
