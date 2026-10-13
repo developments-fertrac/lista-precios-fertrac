@@ -128,7 +128,7 @@
   .ms-btn.active { border-color:var(--green); background:var(--green-pale); color:var(--green); font-weight:600; }
   .ms-btn .ms-label { overflow:hidden; text-overflow:ellipsis; flex:1; }
   .ms-btn .ms-arrow { font-size:0.65rem; flex-shrink:0; }
-  .ms-dropdown { display:none; position:absolute; top:calc(100% + 4px); left:0; min-width:220px; background:white; border:1.5px solid var(--border); border-radius:10px; box-shadow:0 8px 24px rgba(0,0,0,0.12); z-index:300; overflow:hidden; }
+  .ms-dropdown { display:none; position:absolute; top:calc(100% + 4px); left:0; min-width:min(220px, calc(100vw - 24px)); max-width:calc(100vw - 24px); background:white; border:1.5px solid var(--border); border-radius:10px; box-shadow:0 8px 24px rgba(0,0,0,0.12); z-index:300; overflow:hidden; }
   .ms-dropdown.open { display:block; }
   .ms-search { width:100%; padding:8px 12px; border:none; border-bottom:1px solid var(--border); font-size:0.82rem; outline:none; background:#fafafa; }
   .ms-options { max-height:200px; overflow-y:auto; }
@@ -163,6 +163,8 @@
     border-radius: 12px;
     box-shadow: var(--shadow);
     overflow: hidden;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
     margin-bottom: 16px;
   }
   table { width: 100%; border-collapse: collapse; }
@@ -179,6 +181,9 @@
   tbody td { padding: 10px 14px; font-size: 0.85rem; vertical-align: middle; }
   td.td-precio { font-weight: 700; color: var(--green); white-space: nowrap; text-align: right; }
   td.td-inv { text-align: center; font-weight: 600; }
+  /* Evita que textos largos (referencias/producto/marca sin espacios)
+     ensanchen la tabla y desplacen/recorten la columna Precio. */
+  td.td-ref, td.td-marca, td.td-producto { overflow-wrap: anywhere; }
   .inv-pill {
     display: inline-block;
     padding: 2px 10px;
@@ -600,3 +605,20 @@ td.td-img {
   td.td-img { width: 40px; }
   .cell-thumb { width: 36px; height: 36px; }
 }
+
+/* ============================================================
+   Columnas progresivas del listado (vista tabla, >=601px).
+   Al reducir el ancho se prioriza Referencia · Inv. · Precio y se
+   ocultan en este orden: Foto → Producto → Marca.
+   (<=600px ya usa la vista tarjeta, donde todo se apila.)
+   ============================================================ */
+@media (min-width: 601px) and (max-width: 940px) {
+  .th-img, .td-img { display: none; }
+}
+@media (min-width: 601px) and (max-width: 780px) {
+  .th-producto, .td-producto { display: none; }
+}
+@media (min-width: 601px) and (max-width: 640px) {
+  .th-marca, .td-marca { display: none; }
+}
+

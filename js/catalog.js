@@ -370,6 +370,14 @@ function buildFilters() {
         }
       });
     });
+
+    // Reposicionar desplegables abiertos al cambiar tamaño/rotar el equipo.
+    window.addEventListener('resize', function() {
+      FILTER_FIELDS.forEach(function(f) {
+        const dd = document.getElementById('dd-' + f.id);
+        if (dd && dd.classList.contains('open')) msPosition(f.id);
+      });
+    });
   }
   msRefresh();
 }
@@ -529,6 +537,7 @@ function msToggleOpt(fid, val, checked) {
 
     const dd = document.getElementById('dd-' + fid);
     if (dd) dd.classList.add('open');
+    msPosition(fid);
 
     const opts = document.getElementById('opts-' + fid);
     if (opts) opts.scrollTop = optsScroll;
@@ -559,6 +568,7 @@ function msToggle(fid) {
   FILTER_FIELDS.forEach(f => { const d = document.getElementById('dd-' + f.id); if (d) d.classList.remove('open'); });
   if (!open) {
     dd.classList.add('open');
+    msPosition(fid);
     const s = dd.querySelector('.ms-search');
     s.value = ''; msSearch(fid, ''); s.focus();
   }
@@ -567,6 +577,23 @@ function msToggle(fid) {
 function msClose(fid) {
   const dd = document.getElementById('dd-' + fid);
   if (dd) dd.classList.remove('open');
+}
+
+// Mantiene el desplegable dentro del viewport: por defecto se alinea a la
+// izquierda del botón; si se sale por la derecha, se ancla a la derecha.
+// Así la lista desplegable es usable en móviles/pantallas angostas.
+function msPosition(fid) {
+  const wrap = document.getElementById('wrap-' + fid);
+  const dd = document.getElementById('dd-' + fid);
+  if (!wrap || !dd || !dd.classList.contains('open')) return;
+  dd.style.left = '0';
+  dd.style.right = 'auto';
+  const wrapRect = wrap.getBoundingClientRect();
+  const vw = document.documentElement.clientWidth || window.innerWidth;
+  if (dd.offsetWidth && wrapRect.left + dd.offsetWidth > vw - 8) {
+    dd.style.left = 'auto';
+    dd.style.right = '0';
+  }
 }
 
 function msClear(fid) {
@@ -586,6 +613,7 @@ function msClear(fid) {
 
     const dd = document.getElementById('dd-' + fid);
     if (dd) dd.classList.add('open');
+    msPosition(fid);
 
     const opts = document.getElementById('opts-' + fid);
     if (opts) opts.scrollTop = optsScroll;
@@ -717,12 +745,12 @@ function renderTable() {
   }).join('');
   wrapper.innerHTML =
     '<table><thead><tr>' +
-      '<th style="width:64px">Foto</th>' +
-      '<th>Referencia</th>' +
-      '<th>Marca</th>' +
-      '<th>Producto <img src="https://raw.githubusercontent.com/developments-fertrac/lista-precios-fertrac/main/logo2.png" alt="Fertrac" class="th-logo" onerror="this.style.display=\'none\'"></th>' +
-      '<th style="text-align:center">Inv.</th>' +
-      '<th style="text-align:right">Precio Bruto</th>' +
+      '<th class="th-img" style="width:64px">Foto</th>' +
+      '<th class="th-ref">Referencia</th>' +
+      '<th class="th-marca">Marca</th>' +
+      '<th class="th-producto">Producto <img src="https://raw.githubusercontent.com/developments-fertrac/lista-precios-fertrac/main/logo2.png" alt="Fertrac" class="th-logo" onerror="this.style.display=\'none\'"></th>' +
+      '<th class="th-inv" style="text-align:center">Inv.</th>' +
+      '<th class="th-precio" style="text-align:right">Precio Bruto</th>' +
     '</tr></thead>' +
     '<tbody>' + rows + '</tbody></table>' +
     (filtered.length > 200 ? '<div style="text-align:center;padding:10px;font-size:0.8rem;color:#888">Mostrando 200 de ' + filtered.length + ' resultados. Refina tu búsqueda.</div>' : '');
