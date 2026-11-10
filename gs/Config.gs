@@ -21,6 +21,7 @@ const CONFIG = {
   SHEET_PENDIENTES: "PENDIENTES SIN HOJA2",
   SHEET_ACTIVIDAD:  "ACTIVIDAD_USUARIOS",
   SHEET_LOG:        "Log App",
+  SHEET_DISPOSITIVOS: "DISPOSITIVOS",
 
   // ── Log de errores (Log App) ──
   LOG_TTL_DEDUPE:   3600,   // segundos: no repetir el mismo error (módulo+mensaje) en la hoja
@@ -58,6 +59,19 @@ const CONFIG = {
 
   // ── Acceso / API ──
   ACCESS_KEY:        "fertrac2024",
+
+  // ── Lista blanca USUARIO + DISPOSITIVO + CANAL (gs/Autorizacion.gs) ──
+  // false = OBSERVACIÓN: registra y calcula el veredicto (Log App), no bloquea.
+  // true  = CUMPLIMIENTO: bloquea y la llave ACCESS_KEY deja de servir datos (solo ?log=1).
+  ENFORCE_DISPOSITIVOS:       false,
+  CANAL_POR_DEFECTO:          "APP",                 // usuarios con CANAL vacío en USUARIOS AUTORIZADOS
+  MAX_DISPOSITIVOS_POR_CANAL: { APP: 1, WEB: 2 },    // aprobados por usuario y canal (PWA = WEB)
+  MAX_PENDIENTES_POR_USUARIO: 3,                     // evita llenar la hoja/correo con IDs nuevos
+  APROBADORES_DISPOSITIVOS:   ["data_science@fertrac.com"],
+  LOGO_URL:                   "https://app.fertrac.com/logo3.png",   // logo del correo de aprobación
+  // Cliente OAuth emisor (azp) esperado por canal. Vacío = no se verifica.
+  // Se llena con los valores reales de la columna AZP tras la observación.
+  AZP_POR_CANAL:              { APP: [], WEB: [] },
 
   // ── Correos ──
   CORREO_NOTIFICACION: "ctorres@fertrac.com",

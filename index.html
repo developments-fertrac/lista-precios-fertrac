@@ -27,7 +27,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="apple-mobile-web-app-title" content="Lista Fertrac">
 <title>Lista de Precios - Fertrac</title>
-<link rel="manifest" href="/manifest.json?v=10.6.7">
+<link rel="manifest" href="/manifest.json?v=10.6.8">
 <link rel="icon" type="image/png" href="/logo.png">
 <link rel="apple-touch-icon" href="/logo.png">
 <script src="capacitor.js" onerror="console.log('No Capacitor runtime')"></script>
@@ -43,7 +43,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
   })();
 </script>
 
-<link rel="stylesheet" href="/css/styles.css?v=10.6.7">
+<link rel="stylesheet" href="/css/styles.css?v=10.6.8">
 </head>
 <body>
 <!-- Google Tag Manager (noscript) -->
@@ -53,7 +53,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 <!-- LOGIN SCREEN -->
 <div id="login-screen">
   <div class="login-card">
-    <img src="https://raw.githubusercontent.com/developments-fertrac/lista-precios-fertrac/main/logo.png"
+    <img src="/logo.png"
          alt="Fertrac" class="login-logo"
          onerror="this.style.display='none'">
     <h2>Lista de Precios</h2>
@@ -86,6 +86,14 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     </div>
     <div id="login-loading" style="display:none;margin-top:16px;font-size:0.85rem;color:#888;">
       🔄 Verificando...
+    </div>
+    <!-- Lista blanca usuario + dispositivo + canal (auth.js → manejarEstadoDispositivo) -->
+    <div id="device-status" style="display:none;background:#fff3cd;color:#664d03;border-radius:8px;padding:14px;font-size:0.9rem;margin-top:16px;text-align:left;line-height:1.45;">
+      <div id="device-status-msg"></div>
+      <div id="device-status-actions" style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;">
+        <button type="button" onclick="location.reload()" style="flex:1;min-width:120px;padding:10px;border:0;border-radius:8px;background:#F47920;color:#fff;font-weight:600;cursor:pointer;">Reintentar</button>
+        <button type="button" onclick="cerrarSesion()" style="flex:1;min-width:120px;padding:10px;border:1.5px solid #ccc;border-radius:8px;background:#fff;color:#333;cursor:pointer;">Cerrar sesión</button>
+      </div>
     </div>
   </div>
 </div>
@@ -152,16 +160,17 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   </div>
 </main>
 
-<script src="/js/config.js?v=10.6.7"></script>
+<script src="/js/config.js?v=10.6.8"></script>
 <!-- FASE 1: núcleo MVC (Singletons + Observer) — deben cargar antes de auth/catalog -->
-<script src="/js/core/store.js?v=10.6.7"></script>
-<script src="/js/core/platform.js?v=10.6.7"></script>
-<script src="/js/core/queue.js?v=10.6.7"></script>
-<script src="/js/core/api.js?v=10.6.7"></script>
-<script src="/js/core/session.js?v=10.6.7"></script>
-<script src="/js/core/log.js?v=10.6.7"></script>
-<script src="/js/auth.js?v=10.6.7"></script>
-<script src="/js/catalog.js?v=10.6.7"></script>
+<script src="/js/core/store.js?v=10.6.8"></script>
+<script src="/js/core/platform.js?v=10.6.8"></script>
+<script src="/js/core/device.js?v=10.6.8"></script>
+<script src="/js/core/queue.js?v=10.6.8"></script>
+<script src="/js/core/api.js?v=10.6.8"></script>
+<script src="/js/core/session.js?v=10.6.8"></script>
+<script src="/js/core/log.js?v=10.6.8"></script>
+<script src="/js/auth.js?v=10.6.8"></script>
+<script src="/js/catalog.js?v=10.6.8"></script>
 <!-- iOS INSTALL BANNER -->
 <div id="ios-install-banner">
   <span style="font-size:1.6rem">📲</span>

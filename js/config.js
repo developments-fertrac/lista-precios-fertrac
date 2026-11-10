@@ -8,6 +8,9 @@ const CLIENT_ID = '748686271759-3ebepqvfssbpn650m8pu1l6umdq093fo.apps.googleuser
 // CLIENT_ID (proyecto 748686271759) queda solo como referencia/rollback.
 const WEB_CLIENT_ID = '13363096447-a96qshpi1rg9ahoc72t9e04p0nqp000a.apps.googleusercontent.com';
 const ALLOWED_DOMAIN = 'fertrac.com';
+// Versión del frontend (= ?v= de index.html y sw.js). La lista blanca la registra
+// en DISPOSITIVOS.VERSION_APP para el aprobador. Subirla junto con ?v=.
+const APP_WEB_VERSION = '10.6.8';
 
 // redirect_uri OAuth canónico: siempre la raíz del origen actual (sin path, query ni hash).
 // Debe coincidir EXACTO con un "URI de redireccionamiento autorizado" en Google Cloud Console:

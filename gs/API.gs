@@ -27,17 +27,25 @@ function doGet(e) {
 
   // ── 1. Autorización ──
   // estado: 'ok' | 'token_invalido' | 'no_autorizado' | 'sin_credenciales'
+  // Con lista blanca (gs/Autorizacion.gs) además: 'usuario_suspendido' |
+  // 'canal_no_autorizado' | 'dispositivo_pendiente' | 'dispositivo_bloqueado' |
+  // 'dispositivo_limite' | ... — solo si CONFIG.ENFORCE_DISPOSITIVOS = true.
   let estado;
+  let emailToken = null;                                // correo VERIFICADO (no el del query)
   if (params.key === CONFIG.ACCESS_KEY) {
-    estado = 'ok';                                      // transición vía llave
+    // Transición vía llave. En cumplimiento la llave pública ya no sirve datos
+    // (solo ?log=1, atendido arriba): exige token + dispositivo aprobado.
+    estado = CONFIG.ENFORCE_DISPOSITIVOS ? 'token_requerido' : 'ok';
   } else if (params.token) {
-    const email = verificarTokenCacheada_(params.token);
-    if (!email) {
+    const info = verificarTokenInfoCacheada_(params.token);
+    if (!info) {
       estado = 'token_invalido';                        // expirado/inválido → renovar en silencio
-    } else if (!estaAutorizado_(CONFIG.ID_BASE_MOTOR, CONFIG.SHEET_USERS, email)) {
-      estado = 'no_autorizado';                         // token válido, correo fuera de la lista
     } else {
-      estado = 'ok';
+      emailToken = info.email;
+      // no_autorizado (correo fuera de la lista) se mantiene SIEMPRE activo;
+      // el resto de reglas solo bloquea con ENFORCE_DISPOSITIVOS = true.
+      const acl = evaluarAccesoDispositivo_(info.email, info.azp, params);
+      estado = resolverEstadoAcl_(acl, info.email, info.azp, params);
     }
   } else {
     estado = 'sin_credenciales';
@@ -88,7 +96,7 @@ function doGet(e) {
     const tipo = ["login", "heartbeat", "end", "inactive"].includes(params.activity)
       ? params.activity : null;
     if (!tipo) return jsonError_('actividad_invalida');
-    registrarActividad_(params.email, tipo, params.platform);
+    registrarActividad_(emailToken || params.email, tipo, params.platform);   // con token: correo verificado
     return jsonRes_({ ok: true });
   }
 
@@ -224,9 +232,19 @@ function jsonRes_(obj) {
 }
 
 // Verifica el token con Google, cacheando el resultado por token.
-// Devuelve el correo (minúsculas) o null si es inválido. La llamada externa
-// a Google se hace UNA vez por token (TTL 25 min); el resto sale de caché.
+// Devuelve el correo (minúsculas) o null si es inválido. Se conserva para
+// Log.gs; la lógica vive en verificarTokenInfoCacheada_.
 function verificarTokenCacheada_(token) {
+  const info = verificarTokenInfoCacheada_(token);
+  return info ? info.email : null;
+}
+
+// Devuelve { email, azp } o null. `azp` = cliente OAuth que emitió el token
+// (permite distinguir login nativo APK vs login web). Usa tokeninfo y, si no
+// trae correo o falla, cae a userinfo (comportamiento anterior, azp vacío).
+// UNA llamada externa por token; TTL = min(API_TTL_VERIF, vida restante).
+const API_CACHE_VERIF2 = "api_verif2_";
+function verificarTokenInfoCacheada_(token) {
   const cache = CacheService.getScriptCache();
   const digest = Utilities.computeDigest(
     Utilities.DigestAlgorithm.MD5,
@@ -234,13 +252,44 @@ function verificarTokenCacheada_(token) {
     Utilities.Charset.UTF_8
   );
   const hash = digest.map(b => (b < 0 ? b + 256 : b).toString(16).padStart(2, "0")).join("");
-  const key = API_CACHE_VERIF + hash;
+  const key = API_CACHE_VERIF2 + hash;
 
   const cacheado = cache.get(key);
-  if (cacheado !== null) return cacheado === "null" ? null : cacheado;
+  if (cacheado !== null) {
+    if (cacheado === "null") return null;
+    try { return JSON.parse(cacheado); } catch (e) {}
+  }
 
-  // No verificado aún: consultar a Google y cachear el resultado.
-  let email = null;
+  let info = null;
+  let ttl = API_TTL_VERIF;
+  try {
+    const r1 = UrlFetchApp.fetch(
+      "https://oauth2.googleapis.com/tokeninfo?access_token=" + encodeURIComponent(token),
+      { muteHttpExceptions: true }
+    );
+    if (r1.getResponseCode() === 200) {
+      const t = JSON.parse(r1.getContentText());
+      const vida = parseInt(t.expires_in, 10);
+      if (vida > 0) ttl = Math.max(60, Math.min(API_TTL_VERIF, vida));
+      if (t.email && String(t.email_verified) !== "false") {
+        info = { email: String(t.email).trim().toLowerCase(), azp: String(t.azp || "") };
+      } else {
+        const em = verificarTokenUserinfo_(token);
+        if (em) info = { email: em, azp: String(t.azp || "") };
+      }
+    } else {
+      const em = verificarTokenUserinfo_(token);
+      if (em) info = { email: em, azp: "" };
+    }
+  } catch (err) {
+    info = null;
+  }
+  cache.put(key, info === null ? "null" : JSON.stringify(info), ttl);
+  return info;
+}
+
+// Verificación anterior (userinfo): solo correo.
+function verificarTokenUserinfo_(token) {
   try {
     const res = UrlFetchApp.fetch(
       "https://www.googleapis.com/oauth2/v3/userinfo?access_token=" + encodeURIComponent(token),
@@ -248,29 +297,17 @@ function verificarTokenCacheada_(token) {
     );
     if (res.getResponseCode() === 200) {
       const info = JSON.parse(res.getContentText());
-      email = info.email ? String(info.email).trim().toLowerCase() : null;
+      return info.email ? String(info.email).trim().toLowerCase() : null;
     }
-  } catch (err) {
-    email = null;
-  }
-  cache.put(key, email === null ? "null" : email, API_TTL_VERIF);
-  return email;
+  } catch (err) {}
+  return null;
 }
 
 // ¿El correo está en la hoja USUARIOS AUTORIZADOS (columna A, desde fila 2)?
+// Ahora sale de la matriz cacheada de gs/Autorizacion.gs (antes leía la hoja
+// en cada request). Se conserva la firma por compatibilidad.
 function estaAutorizado_(idSpreadsheet, nombreHoja, email) {
-  try {
-    const sh = SpreadsheetApp.openById(idSpreadsheet).getSheetByName(nombreHoja);
-    if (!sh) return false;
-    const last = sh.getLastRow();
-    if (last < 2) return false;                         // fila 1 = encabezado
-    const correos = sh.getRange(2, 1, last - 1, 1).getValues()
-      .map(r => String(r[0] || "").trim().toLowerCase())
-      .filter(Boolean);
-    return correos.includes(email);
-  } catch (err) {
-    return false;
-  }
+  return usuarioEnLista_(email);
 }
 
 // ── Invalida la caché del catálogo tras una sync completa ──

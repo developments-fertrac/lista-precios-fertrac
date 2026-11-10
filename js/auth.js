@@ -355,6 +355,85 @@ function manejarNoAutorizado() {
   }
 }
 
+// ============================================================
+// LISTA BLANCA usuario + dispositivo + canal (backend: gs/Autorizacion.gs)
+// Solo llegan estos códigos si el backend está en cumplimiento
+// (CONFIG.ENFORCE_DISPOSITIVOS = true); en observación el API responde normal.
+// ============================================================
+const ACL_CODIGOS = [
+  'usuario_suspendido', 'canal_no_autorizado', 'canal_no_verificado',
+  'dispositivo_pendiente', 'dispositivo_bloqueado', 'dispositivo_limite',
+  'dispositivo_requerido', 'dispositivo_invalido'
+];
+// Estados que retiran el catálogo del equipo (igual que manejarNoAutorizado).
+// En 'pendiente'/'límite' se conserva: el dispositivo puede aprobarse en minutos.
+const ACL_BORRA_CACHE = ['usuario_suspendido', 'canal_no_autorizado', 'canal_no_verificado', 'dispositivo_bloqueado'];
+
+function errorApi(code) { const e = new Error(code); e.code = code; return e; }
+
+// El código del dispositivo NO se muestra al usuario: solo llega al correo del aprobador.
+function mensajeEstadoDispositivo(code) {
+  const canal = isNativeApp ? 'la app' : 'el navegador';
+  switch (code) {
+    case 'dispositivo_pendiente':
+      return '📱 El dispositivo está <b>pendiente de aprobación</b>. Por favor escalar con el área encargada y reintentar cuando sea confirmado.';
+    case 'dispositivo_limite':
+      return '📱 Alcanzaste el máximo de dispositivos autorizados para ' + canal + '. Por favor escalar con el área encargada para liberar uno y reintentar cuando sea confirmado.';
+    case 'dispositivo_bloqueado':
+      return '⛔ Este dispositivo fue <b>bloqueado</b>. Contacta a tu administrador.';
+    case 'usuario_suspendido':
+      return '⛔ Tu acceso está <b>suspendido</b>. Contacta a tu administrador.';
+    case 'canal_no_autorizado':
+    case 'canal_no_verificado':
+      return '⛔ Tu usuario no está habilitado para ingresar desde ' + canal + '.' +
+        (isNativeApp ? '' : ' Usa la app Fertrac en tu celular.') + ' Si lo necesitas, solicítalo a tu administrador.';
+    case 'token_requerido':
+      return '🔒 Tu sesión expiró. Vuelve a iniciar sesión para continuar.';
+    default:
+      return '⚠️ No se pudo identificar este dispositivo. Pulsa "Reintentar".';
+  }
+}
+
+let _estadoDispositivoMostrado = null;
+function manejarEstadoDispositivo(code) {
+  if (_estadoDispositivoMostrado === code) return;      // ráfagas (catálogo + fotos) → una sola vez
+  _estadoDispositivoMostrado = code;
+
+  App.Log.warn('auth', 'Lista blanca: ' + code, '', { email: userEmail || '', canal: window.FT_CANAL || '' });
+  try {
+    window.dataLayer = window.dataLayer || [];
+    window.dataLayer.push({ event: 'dispositivo_estado', estado: code, canal: window.FT_CANAL || '' });   // sin device_id
+  } catch (e) {}
+
+  if (ACL_BORRA_CACHE.indexOf(code) >= 0) {
+    try {
+      localStorage.removeItem('fertrac_data');
+      localStorage.removeItem('fertrac_updated');
+    } catch (e) {}
+    App.Store.clear();
+  }
+
+  document.getElementById('app-content').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+  ['access-denied', 'login-loading', 'session-expired'].forEach(function (id) {
+    const el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  });
+
+  // Con sesión válida (todo menos token_requerido) el botón de Google confunde:
+  // se ocultan y se ofrecen "Reintentar" y "Cerrar sesión".
+  const esLogin = code === 'token_requerido';
+  const btnGoogle = document.querySelector('#login-screen .login-card > button');
+  if (btnGoogle) btnGoogle.style.display = esLogin ? '' : 'none';
+
+  const box = document.getElementById('device-status');
+  if (box) {
+    document.getElementById('device-status-msg').innerHTML = mensajeEstadoDispositivo(code);
+    document.getElementById('device-status-actions').style.display = esLogin ? 'none' : 'flex';
+    box.style.display = 'block';
+  }
+}
+
 // ── Una petición normalizada al API ──
 // modo: 'data' (catálogo) | 'img' (imagen, requiere fileId)
 async function _intentoApi(qs, modo) {
@@ -419,7 +498,7 @@ async function apiRequest(modo, fileId, extra) {
   // Best-effort (actividad/heartbeat): nunca disparar renovación de token
   // en segundo plano; se usa el token vigente o se cae directo a la llave.
   const noRenew = !!(extra && extra.noRenew);
-  let sufijo;
+  let sufijo = '';
   if (modo === 'img') sufijo = '&img=' + encodeURIComponent(fileId);
   else if (modo === 'fotos') sufijo = '&fotos=1';
   else if (modo === 'data' && extra && extra.delta) {
@@ -429,9 +508,12 @@ async function apiRequest(modo, fileId, extra) {
     if (extra.activity) sufijo += '&activity=' + encodeURIComponent(extra.activity);
     if (extra.email)   sufijo += '&email=' + encodeURIComponent(extra.email);
     if (extra.platform) sufijo += '&platform=' + encodeURIComponent(extra.platform);
-  } else {
-    sufijo = '';
   }
+
+  // Lista blanca: identifica dispositivo + canal en TODAS las peticiones.
+  // Si el ID no se pudo resolver se envía sin él (el backend responde
+  // dispositivo_requerido solo cuando la lista blanca está en cumplimiento).
+  try { sufijo += App.Device.queryString(await App.Device.ready()); } catch (e) {}
 
   // Token disponible (si expiró localmente, intenta renovar antes de pedir)
   let token = getToken();
@@ -443,6 +525,7 @@ async function apiRequest(modo, fileId, extra) {
     let res = await _intentoApi('token=' + encodeURIComponent(token) + sufijo, modo);
     if (res.ok) return res.payload;
     if (res.code === 'no_autorizado' && ENFORCE_REVOCACION) { manejarNoAutorizado(); throw new Error('no_autorizado'); }
+    if (ACL_CODIGOS.indexOf(res.code) >= 0) { manejarEstadoDispositivo(res.code); throw errorApi(res.code); }
     // Un token recién emitido (login de hace segundos) que el backend rechaza
     // no se arregla mintiendo otro en el acto: mismo cliente, mismo veredicto,
     // y el renew abriría popup/ruido en mitad del callback de login.
@@ -452,6 +535,7 @@ async function apiRequest(modo, fileId, extra) {
         res = await _intentoApi('token=' + encodeURIComponent(nuevo) + sufijo, modo);
         if (res.ok) return res.payload;
         if (res.code === 'no_autorizado' && ENFORCE_REVOCACION) { manejarNoAutorizado(); throw new Error('no_autorizado'); }
+        if (ACL_CODIGOS.indexOf(res.code) >= 0) { manejarEstadoDispositivo(res.code); throw errorApi(res.code); }
       }
     }
     // cualquier otro caso → cae a la llave
@@ -472,6 +556,10 @@ async function apiRequest(modo, fileId, extra) {
       if (resK.code !== 'temporalmente_ocupado') break;
     }
   }
+
+  // Lista blanca en cumplimiento: la llave ya no sirve datos → hay que volver a
+  // iniciar sesión. Las tareas de fondo (noRenew: actividad) no sacan al usuario.
+  if (resK.code === 'token_requerido' && !noRenew) manejarEstadoDispositivo('token_requerido');
 
   const err = new Error(resK.code || 'error');
   err.code = resK.code || 'error';
