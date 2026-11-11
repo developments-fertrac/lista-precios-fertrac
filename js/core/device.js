@@ -141,10 +141,21 @@ window.App = window.App || {};
     return _promesa;
   }
 
-  // Parámetros para el API: &device=&canal=&plat=&modelo=&ver=
+  // ¿Navegador/PWA en Android? Cubre también "Ver como computador" de Chrome,
+  // que cambia el user-agent a Linux de escritorio pero deja la pantalla táctil.
+  function esAndroid() {
+    if (isNative) return false;
+    const ua = navigator.userAgent || '';
+    if (/android/i.test(ua)) return true;
+    try { if (navigator.userAgentData && /android/i.test(navigator.userAgentData.platform || '')) return true; } catch (e) {}
+    return /Linux/.test(ua) && !/CrOS/.test(ua) && (navigator.maxTouchPoints || 0) > 1;
+  }
+
+  // Parámetros para el API: &device=&canal=&plat=&modelo=&ver=&so=
   function queryString(d) {
     if (!d || !d.id) return '';
     return '&device=' + encodeURIComponent(d.id) +
+      (esAndroid() ? '&so=android' : '') +
       '&canal=' + encodeURIComponent(window.FT_CANAL || '') +
       '&plat=' + encodeURIComponent(d.plat) +
       '&modelo=' + encodeURIComponent(d.modelo) +

@@ -69,6 +69,11 @@ function _colPorEncabezado_(encabezados, nombre) {
   return -1;
 }
 
+// ── ¿Petición WEB desde un celular Android? (plat = web-android | pwa-android, o so=android) ──
+function esAndroidWeb_(params) {
+  return /android/i.test(_aclTxt_(params.plat)) || _aclTxt_(params.so).toLowerCase() === "android";
+}
+
 // ── Canal de la solicitud: manda el prefijo del device_id; si no hay, el canal declarado ──
 function canalDeSolicitud_(params) {
   const dev = _aclTxt_(params.device);
@@ -167,6 +172,7 @@ function usuarioEnLista_(email) {
 //   ok | no_autorizado | usuario_suspendido | dispositivo_requerido | dispositivo_invalido
 //   | canal_no_autorizado | canal_no_verificado | dispositivo_pendiente
 //   | dispositivo_bloqueado | dispositivo_limite | acl_no_disponible
+//   | web_android_no_permitido
 // ============================================================
 function evaluarAccesoDispositivo_(email, azp, params) {
   email = _aclEmail_(email);
@@ -183,6 +189,10 @@ function evaluarAccesoDispositivo_(email, azp, params) {
   if (!device) return r("dispositivo_requerido");
   if (!ACL_RE_DEVICE.test(device) || !canal) return r("dispositivo_invalido");
   if (u.canal !== "AMBOS" && u.canal !== canal) return r("canal_no_autorizado");
+
+  // Android solo por la APK: navegador o PWA en un celular Android se rechaza
+  // (antes de registrar, para no crear pendientes que nunca se aprobarían).
+  if (CONFIG.BLOQUEAR_WEB_ANDROID && canal === "WEB" && esAndroidWeb_(params)) return r("web_android_no_permitido");
 
   // Verificación del canal con el cliente OAuth emisor del token (azp).
   // Lista vacía = no se verifica (se llena con los azp reales observados).

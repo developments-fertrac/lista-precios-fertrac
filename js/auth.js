@@ -363,11 +363,11 @@ function manejarNoAutorizado() {
 const ACL_CODIGOS = [
   'usuario_suspendido', 'canal_no_autorizado', 'canal_no_verificado',
   'dispositivo_pendiente', 'dispositivo_bloqueado', 'dispositivo_limite',
-  'dispositivo_requerido', 'dispositivo_invalido'
+  'dispositivo_requerido', 'dispositivo_invalido', 'web_android_no_permitido'
 ];
 // Estados que retiran el catálogo del equipo (igual que manejarNoAutorizado).
 // En 'pendiente'/'límite' se conserva: el dispositivo puede aprobarse en minutos.
-const ACL_BORRA_CACHE = ['usuario_suspendido', 'canal_no_autorizado', 'canal_no_verificado', 'dispositivo_bloqueado'];
+const ACL_BORRA_CACHE = ['usuario_suspendido', 'canal_no_autorizado', 'canal_no_verificado', 'dispositivo_bloqueado', 'web_android_no_permitido'];
 
 function errorApi(code) { const e = new Error(code); e.code = code; return e; }
 
@@ -387,6 +387,8 @@ function mensajeEstadoDispositivo(code) {
     case 'canal_no_verificado':
       return '⛔ Tu usuario no está habilitado para ingresar desde ' + canal + '.' +
         (isNativeApp ? '' : ' Usa la app Fertrac en tu celular.') + ' Si lo necesitas, solicítalo a tu administrador.';
+    case 'web_android_no_permitido':
+      return '📱 En celulares Android el acceso es <b>únicamente desde la app Fertrac</b>. Instálala o actualízala para continuar.';
     case 'token_requerido':
       return '🔒 Tu sesión expiró. Vuelve a iniciar sesión para continuar.';
     default:
